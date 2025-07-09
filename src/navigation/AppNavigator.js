@@ -10,6 +10,8 @@ import CameraScreen from '../screens/CameraScreen';
 import ViewApplicationsScreen from '../screens/ViewApplicationsScreen';
 import ApplicationDetailsScreen from '../screens/ApplicationDetailsScreen';
 import DocumentFormScreen from '../screens/DocumentFormScreen';
+import DashboardScreen from '../screens/DashboardScreen';
+
 
 
 const Stack = createStackNavigator();
@@ -83,6 +85,15 @@ const AppNavigator = () => {
             headerBackTitle: 'Back',
           }} 
         />
+        <Stack.Screen 
+          name="Dashboard" 
+          component={DashboardScreen} 
+          options={{ 
+            title: 'Dashboard',
+            headerBackTitle: 'Back',
+          }} 
+        />
+
       </Stack.Navigator>
     </NavigationContainer>
   );

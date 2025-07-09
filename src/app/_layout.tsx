@@ -17,9 +17,6 @@ export default function RootLayout() {
     <OfflineProvider>
       <Stack>
         <Stack.Screen name="index" options={{ headerShown: false }} />
-        <Stack.Screen name="home" options={{ headerShown: false }} />
-        <Stack.Screen name="camera" options={{ headerShown: false }} />
-        <Stack.Screen name="document-form" options={{ headerShown: false }} />
         <Stack.Screen name="+not-found" />
       </Stack>
     </OfflineProvider>

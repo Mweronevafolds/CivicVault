@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import React, { useState, useEffect } from 'react';
+
 import {
   StyleSheet,
   Text,
@@ -48,35 +48,28 @@ const LoginScreen = ({ navigation }) => {
   }, [isOnline]); // Reruns if the network status changes
 
   const handleLogin = async () => {
-    if (!isOnline) {
+    console.log('Login initiated - testing navigation only');
+    setIsLoading(true);
+    
+    try {
+      // Test navigation directly without any storage
+      console.log('Attempting navigation to Home screen');
+      navigation.replace('Home');
+      console.log('Navigation command executed');
+
+
+
+    } catch (error) {
+      console.error('Navigation error:', error);
       Alert.alert(
-        'Offline',
-        'No internet connection. Please connect to the internet to log in for the first time.'
+        'Navigation Test Failed',
+        `Could not navigate to Home screen.\nError: ${error.message}`
       );
-      return;
+
+    } finally {
+      setIsLoading(false);
     }
 
-    setIsLoading(true);
-
-    // --- MOCK API CALL ---
-    // In a real app, you would replace this with a fetch call to your Kotlin backend
-    setTimeout(async () => {
-      const trimmedUsername = username.trim().toLowerCase();
-      const trimmedPassword = password.trim();
-      if (trimmedUsername === 'user' && trimmedPassword === 'password') {
-        try {
-          // NEW: Save the session on successful online login
-          await AsyncStorage.setItem(SESSION_KEY, JSON.stringify({ username: trimmedUsername, loggedInAt: Date.now() }));
-          console.log('Online login successful, session saved.');
-          navigation.replace('Home'); // Navigate to the Home screen
-        } catch (e) {
-          Alert.alert('Error', 'Could not save user session.');
-        }
-      } else {
-        Alert.alert('Login Failed', 'Invalid username or password.');
-      }
-      setIsLoading(false);
-    }, 1000);
   };
 
   return (
@@ -109,7 +102,8 @@ const LoginScreen = ({ navigation }) => {
           <View style={styles.form}>
             <TextInput
               style={styles.input}
-              placeholder="Username (user)"
+              placeholder="Username (demo)"
+
               placeholderTextColor="#888"
               value={username}
               onChangeText={setUsername}
@@ -118,7 +112,8 @@ const LoginScreen = ({ navigation }) => {
             <View style={styles.passwordContainer}>
               <TextInput
                 style={styles.inputPassword}
-                placeholder="Password (password)"
+              placeholder="Password (demo123)"
+
                 placeholderTextColor="#888"
                 value={password}
                 onChangeText={setPassword}

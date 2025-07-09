@@ -52,17 +52,33 @@ export default function DocumentForm() {
     setIsLoading(false);
   };
 
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+
   const validateForm = () => {
-    if (!formData.fullName.trim() || !formData.dateOfBirth.trim()) {
-      Alert.alert("Validation Error", "Full Name and Date of Birth are required.");
-      return false;
+    const errors: Record<string, string> = {};
+    
+    if (!formData.fullName.trim()) {
+      errors.fullName = 'Full Name is required';
+    }
+    if (!formData.dateOfBirth.trim()) {
+      errors.dateOfBirth = 'Date of Birth is required';
     }
     if (docType === 'birth' && !formData.placeOfBirth.trim()) {
-      Alert.alert("Validation Error", "Place of Birth is required for birth certificate.");
+      errors.placeOfBirth = 'Place of Birth is required';
+    }
+
+    setValidationErrors(errors);
+    
+    if (Object.keys(errors).length > 0) {
+      Alert.alert(
+        "Validation Error", 
+        "Please fill in all required fields correctly."
+      );
       return false;
     }
     return true;
   };
+
 
   return (
     <ThemedView style={styles.container}>
@@ -72,34 +88,75 @@ export default function DocumentForm() {
 
       <Text style={styles.title}>Enter {docType === 'birth' ? 'Birth' : 'ID'} Details</Text>
 
-      <TextInput
-        style={styles.input}
-        placeholder="Full Name"
-        value={formData.fullName}
-        onChangeText={text => setFormData({...formData, fullName: text})}
-      />
+      <View style={styles.inputContainer}>
+        <TextInput
+          style={[styles.input, validationErrors.fullName && styles.inputError]}
+          placeholder="Full Name *"
+          placeholderTextColor="#888"
+          value={formData.fullName}
+          onChangeText={text => {
+            setFormData({...formData, fullName: text});
+            if (validationErrors.fullName) {
+              setValidationErrors(prev => ({...prev, fullName: ''}));
+            }
+          }}
+        />
+        {validationErrors.fullName && (
+          <Text style={styles.errorText}>{validationErrors.fullName}</Text>
+        )}
+      </View>
 
-      <TextInput
-        style={styles.input}
-        placeholder="Date of Birth (YYYY-MM-DD)"
-        value={formData.dateOfBirth}
-        onChangeText={text => setFormData({...formData, dateOfBirth: text})}
-      />
+
+
+      <View style={styles.inputContainer}>
+        <TextInput
+          style={[styles.input, validationErrors.dateOfBirth && styles.inputError]}
+          placeholder="Date of Birth (YYYY-MM-DD) *"
+          placeholderTextColor="#888"
+          value={formData.dateOfBirth}
+          onChangeText={text => {
+            setFormData({...formData, dateOfBirth: text});
+            if (validationErrors.dateOfBirth) {
+              setValidationErrors(prev => ({...prev, dateOfBirth: ''}));
+            }
+          }}
+        />
+        {validationErrors.dateOfBirth && (
+          <Text style={styles.errorText}>{validationErrors.dateOfBirth}</Text>
+        )}
+      </View>
+
+
 
       {docType === 'birth' && (
         <>
-          <TextInput
-            style={styles.input}
-            placeholder="Place of Birth"
-            value={formData.placeOfBirth}
-            onChangeText={text => setFormData({...formData, placeOfBirth: text})}
-          />
+          <View style={styles.inputContainer}>
+            <TextInput
+              style={[styles.input, validationErrors.placeOfBirth && styles.inputError]}
+              placeholder="Place of Birth *"
+              placeholderTextColor="#888"
+              value={formData.placeOfBirth}
+              onChangeText={text => {
+                setFormData({...formData, placeOfBirth: text});
+                if (validationErrors.placeOfBirth) {
+                  setValidationErrors(prev => ({...prev, placeOfBirth: ''}));
+                }
+              }}
+            />
+            {validationErrors.placeOfBirth && (
+              <Text style={styles.errorText}>{validationErrors.placeOfBirth}</Text>
+            )}
+          </View>
+
+
           <TextInput
             style={styles.input}
             placeholder="Parent Names"
+            placeholderTextColor="#888"
             value={formData.parentNames}
             onChangeText={text => setFormData({...formData, parentNames: text})}
           />
+
         </>
       )}
 
@@ -121,6 +178,19 @@ export default function DocumentForm() {
 }
 
 const styles = StyleSheet.create({
+  inputContainer: {
+    marginBottom: 15,
+  },
+  inputError: {
+    borderColor: 'red',
+  },
+  errorText: {
+    color: 'red',
+    fontSize: 12,
+    marginTop: 4,
+    marginLeft: 4,
+  },
+
   container: {
     flex: 1,
     padding: 20,

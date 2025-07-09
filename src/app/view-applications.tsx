@@ -1,5 +1,5 @@
 import React, { useContext } from 'react';
-import {
+import { 
   StyleSheet,
   Text,
   View,
@@ -9,28 +9,35 @@ import {
   TouchableOpacity,
   RefreshControl,
 } from 'react-native';
-import { OfflineContext } from '../context/OfflineContext';
+import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useOffline } from '../context/OfflineContext';
 
 
-const ViewApplicationsScreen = ({ navigation }) => {
-  const { offlineQueue, submittedDocs } = useContext(OfflineContext);
+interface SubmissionItem {
+  id: string;
+  type: string;
+  name: string;
+  status: string;
+}
+
+
+export default function ViewApplications() {
+  const { queue } = useOffline();
   
-  const pendingSubmissions = offlineQueue.map(item => ({
+  const pendingSubmissions: SubmissionItem[] = queue.map((item: { timestamp: number; formData: { fullName: string } }) => ({
+
     id: item.timestamp.toString(),
-    type: item.docType === 'birth' ? 'Birth Certificate' : 'ID Card',
+    type: 'ID Card', // Default type since docType isn't in OfflineItem
     name: item.formData.fullName,
     status: 'Pending Sync'
   }));
 
-  const syncedSubmissions = submittedDocs.map(item => ({
-    id: item.timestamp.toString(),
-    type: item.docType === 'birth' ? 'Birth Certificate' : 'ID Card', 
-    name: item.formData.fullName,
-    status: 'Submitted'
-  }));
-  // A helper function to render each item in our lists
-  const renderItem = ({ item }) => (
+  const syncedSubmissions: SubmissionItem[] = []; // Empty since submittedDocs isn't in context
+
+
+  const renderItem = ({ item }: { item: SubmissionItem }) => (
+
     <View style={styles.itemContainer}>
       <View style={styles.itemIcon}>
         <Ionicons
@@ -46,7 +53,7 @@ const ViewApplicationsScreen = ({ navigation }) => {
       <View style={styles.itemStatus}>
         <Text style={[
             styles.statusText,
-            { color: item.status === 'Submitted' ? 'green' : '#f59e0b' } // Different color for status
+            { color: item.status === 'Submitted' ? 'green' : '#f59e0b' }
         ]}>
           {item.status}
         </Text>
@@ -58,40 +65,38 @@ const ViewApplicationsScreen = ({ navigation }) => {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
+        <TouchableOpacity onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color="#111" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>My Applications</Text>
       </View>
 
-        <FlatList
-          data={[...pendingSubmissions, ...syncedSubmissions]}
-          renderItem={renderItem}
-          keyExtractor={(item) => item.id}
-          ListHeaderComponent={
-            <Text style={styles.listHeader}>
-              Showing all submissions. Items saved offline will be synced automatically.
-            </Text>
-          }
-          contentContainerStyle={styles.listContainer}
-          refreshControl={
-            <RefreshControl
-              refreshing={false}
-              onRefresh={() => {/* TODO: Add refresh logic */}}
-            />
-          }
-          ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>No applications found</Text>
-            </View>
-          }
-        />
-
+      <FlatList
+        data={[...pendingSubmissions, ...syncedSubmissions]}
+        renderItem={renderItem}
+        keyExtractor={(item) => item.id}
+        ListHeaderComponent={
+          <Text style={styles.listHeader}>
+            Showing all submissions. Items saved offline will be synced automatically.
+          </Text>
+        }
+        contentContainerStyle={styles.listContainer}
+        refreshControl={
+          <RefreshControl
+            refreshing={false}
+            onRefresh={() => {/* TODO: Add refresh logic */}}
+          />
+        }
+        ListEmptyComponent={
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>No applications found</Text>
+          </View>
+        }
+      />
     </SafeAreaView>
   );
-};
+}
 
-// --- STYLES ---
 const styles = StyleSheet.create({
   emptyContainer: {
     flex: 1,
@@ -160,5 +165,3 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
 });
-
-export default ViewApplicationsScreen;

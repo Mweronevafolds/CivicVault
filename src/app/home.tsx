@@ -1,12 +1,22 @@
-// path: app/home.tsx
-
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 // A standard blue color for the theme. You can change this later.
 const THEME_COLOR = '#007AFF';
+
+type MenuItem = {
+  title: string;
+  icon: string;
+  screen: '/camera' | '/view-applications';
+  params?: { docType: 'birth' | 'id' };
+} | {
+  title: string;
+  icon: string;
+  screen: string;
+  params?: undefined;
+};
 
 export default function HomeScreen() {
   const { userName } = useLocalSearchParams();
@@ -19,12 +29,11 @@ export default function HomeScreen() {
   const menuItems = [
     { title: 'Register Birth', icon: 'baby-face-outline', screen: '/camera', params: { docType: 'birth' } },
     { title: 'Request ID', icon: 'card-account-details-outline', screen: '/camera', params: { docType: 'id' } },
-    { title: 'View My Applications', icon: 'file-document-multiple-outline', action: () => Alert.alert("Info", "This feature is not yet implemented.") },
-    { title: 'Dashboard', icon: 'view-dashboard-outline', action: () => Alert.alert("Info", "This feature is not yet implemented.") },
-  ];
+    { title: 'View My Applications', icon: 'file-document-multiple-outline', screen: '/view-applications' },
+    { title: 'Dashboard', icon: 'view-dashboard-outline', screen: '/dashboard' },
+  ] as MenuItem[];
 
   return (
-    // Replaced ThemedView with a standard View to ensure it works.
     <View style={styles.container}>
       <Text style={styles.greeting}>Hello, {userName || 'User'}</Text>
       
@@ -33,7 +42,7 @@ export default function HomeScreen() {
           <TouchableOpacity 
             key={index} 
             style={styles.button} 
-            onPress={() => item.screen ? router.push({ pathname: item.screen, params: item.params }) : item.action()}
+            onPress={() => router.push({ pathname: item.screen as any, params: item.params })}
           >
             <MaterialCommunityIcons name={item.icon as any} size={48} color={THEME_COLOR} />
             <Text style={styles.buttonText}>{item.title}</Text>

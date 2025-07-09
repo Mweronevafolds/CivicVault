@@ -37,8 +37,9 @@ export default function HomeScreen({ navigation, route }) {
       id: 'dashboard', 
       title: 'Dashboard', 
       icon: 'stats-chart-outline',
-      onPress: () => Alert.alert('Dashboard', 'Dashboard screen will be implemented in the next phase.')
+      onPress: () => navigation.navigate('Dashboard')
     },
+
   ];
 
   return (

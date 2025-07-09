@@ -4,10 +4,13 @@ import { createStackNavigator } from '@react-navigation/stack';
 
 // Import screens
 import LoginScreen from '../screens/LoginScreen';
+import SignUpScreen from '../screens/SignUpScreen';
 import HomeScreen from '../screens/HomeScreen';
 import CameraScreen from '../screens/CameraScreen';
 import ViewApplicationsScreen from '../screens/ViewApplicationsScreen';
 import ApplicationDetailsScreen from '../screens/ApplicationDetailsScreen';
+import DocumentFormScreen from '../screens/DocumentFormScreen';
+
 
 const Stack = createStackNavigator();
 
@@ -36,6 +39,11 @@ const AppNavigator = () => {
           options={{ headerShown: false }}
         />
         <Stack.Screen 
+          name="SignUp" 
+          component={SignUpScreen} 
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen 
           name="Home" 
           component={HomeScreen} 
           options={{ 
@@ -48,6 +56,14 @@ const AppNavigator = () => {
           component={CameraScreen} 
           options={{ 
             title: 'Capture Document',
+            headerBackTitle: 'Back',
+          }} 
+        />
+        <Stack.Screen 
+          name="DocumentForm" 
+          component={DocumentFormScreen} 
+          options={{ 
+            title: 'Document Form',
             headerBackTitle: 'Back',
           }} 
         />

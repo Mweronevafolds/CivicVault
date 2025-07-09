@@ -1,20 +1,16 @@
-import React from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { OfflineProvider } from './src/context/OfflineContext'; // UNCOMMENT THIS LINE
-import AppNavigator from './src/navigation/AppNavigator';
+import { OfflineProvider } from './src/context/OfflineContext';
+import { Slot } from 'expo-router';
 
 /**
  * This is the main entry point for the CivicVault application.
- * It sets up the core providers and navigation.
+ * It sets up the core providers and navigation using Expo Router.
  */
 export default function App() {
   return (
-    <>
-      <OfflineProvider> 
-        <AppNavigator />
-      </OfflineProvider> 
-      {/* UNCOMMENT THE <OfflineProvider> WRAPPER */}
+    <OfflineProvider>
+      <Slot />
       <StatusBar style="auto" />
-    </>
+    </OfflineProvider>
   );
 }

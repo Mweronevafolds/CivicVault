@@ -1,11 +1,27 @@
-import React from 'react';
-import { NavigationContainer } from '@react-navigation/native';
-import AppNavigator from '../navigation/AppNavigator';
+import { Stack } from 'expo-router';
+import { useFonts } from 'expo-font';
+import 'react-native-reanimated';
+import { OfflineProvider } from '../context/OfflineContext';
 
 export default function RootLayout() {
+  const [loaded] = useFonts({
+    SpaceMono: require('../../assets/fonts/SpaceMono-Regular.ttf'),
+
+  });
+
+  if (!loaded) {
+    return null;
+  }
+
   return (
-    <NavigationContainer>
-      <AppNavigator />
-    </NavigationContainer>
+    <OfflineProvider>
+      <Stack>
+        <Stack.Screen name="index" options={{ headerShown: false }} />
+        <Stack.Screen name="home" options={{ headerShown: false }} />
+        <Stack.Screen name="camera" options={{ headerShown: false }} />
+        <Stack.Screen name="document-form" options={{ headerShown: false }} />
+        <Stack.Screen name="+not-found" />
+      </Stack>
+    </OfflineProvider>
   );
 }

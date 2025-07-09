@@ -1,82 +1,51 @@
-import React, { useState, useEffect } from 'react';
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   StyleSheet,
   Text,
   View,
   TextInput,
   TouchableOpacity,
-  SafeAreaView,
-  StatusBar,
-  ActivityIndicator,
-  Alert, // NEW: For showing messages
   KeyboardAvoidingView,
   ScrollView,
   TouchableWithoutFeedback,
   Keyboard,
   Platform,
+  Alert,
+  StatusBar,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage'; // NEW: For local storage
-import { useOffline } from '../context/OfflineContext'; // NEW: Our custom hook
 
-// NEW: A constant for our session key
-const SESSION_KEY = '@CivicVault:userSession';
-
-const LoginScreen = ({ navigation }) => {
+const SignUpScreen = ({ navigation }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const { isOnline } = useOffline(); // NEW: Get network status from our context
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-  // NEW: This effect runs when the screen loads to check for an offline session
-  useEffect(() => {
-    const checkOfflineSession = async () => {
-      try {
-        const savedSession = await AsyncStorage.getItem(SESSION_KEY);
-        if (savedSession) {
-          console.log('Found offline session, logging in automatically.');
-          navigation.replace('Home'); // Go directly to Home screen
-        }
-      } catch (e) {
-        console.error('Failed to load offline session', e);
-      }
-    };
-
-    checkOfflineSession();
-  }, [isOnline]); // Reruns if the network status changes
-
-  const handleLogin = async () => {
-    if (!isOnline) {
-      Alert.alert(
-        'Offline',
-        'No internet connection. Please connect to the internet to log in for the first time.'
-      );
+  const handleSignUp = () => {
+    if (!username || !password || !confirmPassword) {
+      Alert.alert('Error', 'Please fill in all fields.');
+      return;
+    }
+    if (password !== confirmPassword) {
+      Alert.alert('Error', 'Passwords do not match.');
       return;
     }
 
     setIsLoading(true);
 
-    // --- MOCK API CALL ---
-    // In a real app, you would replace this with a fetch call to your Kotlin backend
-    setTimeout(async () => {
-      const trimmedUsername = username.trim().toLowerCase();
-      const trimmedPassword = password.trim();
-      if (trimmedUsername === 'user' && trimmedPassword === 'password') {
-        try {
-          // NEW: Save the session on successful online login
-          await AsyncStorage.setItem(SESSION_KEY, JSON.stringify({ username: trimmedUsername, loggedInAt: Date.now() }));
-          console.log('Online login successful, session saved.');
-          navigation.replace('Home'); // Navigate to the Home screen
-        } catch (e) {
-          Alert.alert('Error', 'Could not save user session.');
-        }
-      } else {
-        Alert.alert('Login Failed', 'Invalid username or password.');
-      }
+    // Mock sign-up delay
+    setTimeout(() => {
       setIsLoading(false);
-    }, 1000);
+      Alert.alert('Success', 'Account created successfully!', [
+        {
+          text: 'OK',
+          onPress: () => navigation.replace('Login'),
+        },
+      ]);
+    }, 1500);
   };
 
   return (
@@ -92,24 +61,17 @@ const LoginScreen = ({ navigation }) => {
         >
           <StatusBar barStyle="dark-content" />
 
-          {/* NEW: Visual indicator for network status */}
-          {!isOnline && (
-            <View style={styles.offlineBanner}>
-              <Text style={styles.offlineBannerText}>You are currently offline</Text>
-            </View>
-          )}
-
           <View style={styles.header}>
             <View style={styles.logoContainer}>
-              <Ionicons name="person-circle-outline" size={60} color="#fff" />
+              <Ionicons name="person-add-outline" size={60} color="#fff" />
             </View>
-            <Text style={styles.title}>Login</Text>
+            <Text style={styles.title}>Sign Up</Text>
           </View>
 
           <View style={styles.form}>
             <TextInput
               style={styles.input}
-              placeholder="Username (user)"
+              placeholder="Username"
               placeholderTextColor="#888"
               value={username}
               onChangeText={setUsername}
@@ -118,7 +80,7 @@ const LoginScreen = ({ navigation }) => {
             <View style={styles.passwordContainer}>
               <TextInput
                 style={styles.inputPassword}
-                placeholder="Password (password)"
+                placeholder="Password"
                 placeholderTextColor="#888"
                 value={password}
                 onChangeText={setPassword}
@@ -136,30 +98,51 @@ const LoginScreen = ({ navigation }) => {
                 />
               </TouchableOpacity>
             </View>
+            <View style={styles.passwordContainer}>
+              <TextInput
+                style={styles.inputPassword}
+                placeholder="Confirm Password"
+                placeholderTextColor="#888"
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                secureTextEntry={!showConfirmPassword}
+              />
+              <TouchableOpacity
+                onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                style={styles.eyeIcon}
+                accessibilityLabel={showConfirmPassword ? 'Hide password' : 'Show password'}
+              >
+                <Ionicons
+                  name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'}
+                  size={24}
+                  color="#888"
+                />
+              </TouchableOpacity>
+            </View>
 
-            <TouchableOpacity style={styles.loginButton} onPress={handleLogin} disabled={isLoading}>
+            <TouchableOpacity style={styles.signUpButton} onPress={handleSignUp} disabled={isLoading}>
               {isLoading ? (
                 <ActivityIndicator color="#fff" />
               ) : (
-                <Text style={styles.loginButtonText}>Login</Text>
+                <Text style={styles.signUpButtonText}>Create Account</Text>
               )}
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.registerLink} onPress={() => navigation.navigate('SignUp')}>
-              <Text style={styles.registerText}>
-                New user? <Text style={styles.registerLinkText}>Register here</Text>
+            <TouchableOpacity
+              style={styles.loginLink}
+              onPress={() => navigation.replace('Login')}
+            >
+              <Text style={styles.loginText}>
+                Already have an account? <Text style={styles.loginLinkText}>Login here</Text>
               </Text>
             </TouchableOpacity>
           </View>
-
-          <Text style={styles.footerText}>INCLUSIVE BIRTH & ID REGISTRATION</Text>
         </ScrollView>
       </TouchableWithoutFeedback>
     </KeyboardAvoidingView>
   );
 };
 
-// --- STYLES ---
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -168,20 +151,6 @@ const styles = StyleSheet.create({
   scrollContainer: {
     flexGrow: 1,
     justifyContent: 'center',
-  },
-  // NEW: Styles for the offline banner
-  offlineBanner: {
-    position: 'absolute',
-    top: 0,
-    width: '100%',
-    backgroundColor: '#ffc107',
-    padding: 8,
-    alignItems: 'center',
-    zIndex: 1,
-  },
-  offlineBannerText: {
-    color: '#000',
-    fontWeight: 'bold',
   },
   header: {
     alignItems: 'center',
@@ -225,7 +194,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: 1,
     borderColor: '#ddd',
-    marginBottom: 25,
+    marginBottom: 20,
   },
   inputPassword: {
     flex: 1,
@@ -237,7 +206,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     justifyContent: 'center',
   },
-  loginButton: {
+  signUpButton: {
     backgroundColor: '#2563eb',
     paddingVertical: 15,
     borderRadius: 10,
@@ -245,30 +214,23 @@ const styles = StyleSheet.create({
     elevation: 3,
     shadowColor: '#000',
   },
-  loginButtonText: {
+  signUpButtonText: {
     color: '#fff',
     fontSize: 18,
     fontWeight: 'bold',
   },
-  registerLink: {
+  loginLink: {
     marginTop: 20,
     alignItems: 'center',
   },
-  registerText: {
+  loginText: {
     fontSize: 14,
     color: '#555',
   },
-  registerLinkText: {
+  loginLinkText: {
     color: '#2563eb',
     fontWeight: 'bold',
   },
-  footerText: {
-    position: 'absolute',
-    bottom: 30,
-    alignSelf: 'center',
-    color: '#888',
-    fontSize: 12,
-  },
 });
 
-export default LoginScreen;
+export default SignUpScreen;

@@ -1,183 +1,172 @@
-import React, { useState } from 'react';
-import {
-  StyleSheet,
-  Text,
-  View,
-  TextInput,
-  TouchableOpacity,
-  SafeAreaView,
-  StatusBar,
-  ActivityIndicator,
-  Alert,
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import React, { useState, useContext, useEffect } from 'react';
+import { View, TextInput, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useRouter } from 'expo-router';
+import { MaterialIcons } from '@expo/vector-icons';
+import { OfflineContext } from '../context/OfflineContext';
+import { Colors } from '../constants/Colors';
 
-import { StackNavigationProp } from '@react-navigation/stack';
-
-type RootStackParamList = {
-  Login: undefined;
-  Home: undefined;
-};
-
-export default function LoginScreen({ navigation }: { navigation: StackNavigationProp<RootStackParamList, 'Login'> }) {
+export default function LoginScreen() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [hasSession, setHasSession] = useState(false);
+  const router = useRouter();
 
-  const handleLogin = () => {
-    setIsLoading(true);
-    setTimeout(() => {
-      if (username.toLowerCase() === 'user' && password === 'password') {
-        setIsLoading(false);
-        navigation.replace('Home');
+  const { isOnline } = useContext(OfflineContext);
+
+  useEffect(() => {
+    const checkSession = async () => {
+      try {
+        const savedSession = await AsyncStorage.getItem('@CivicVault:userSession');
+        if (savedSession) {
+          setHasSession(true);
+        } else {
+          setHasSession(false);
+        }
+      } catch (e) {
+        setHasSession(false);
+      }
+    };
+    checkSession();
+  }, []);
+
+  const handleLogin = async () => {
+    setLoading(true);
+
+    if (!isOnline) {
+      if (hasSession) {
+        // Allow offline login if session exists
+        setLoading(false);
+        router.replace({ pathname: '/home', params: { userName: 'User' } });
+        return;
       } else {
-        setIsLoading(false);
+        setLoading(false);
+        Alert.alert('Offline', 'No internet connection and no saved session. Please connect to the internet to log in for the first time.');
+        return;
+      }
+    }
+
+    // Mock login logic
+    setTimeout(async () => {
+      if (username.toLowerCase() === 'user' && password === 'password') {
+        try {
+          await AsyncStorage.setItem('@CivicVault:userSession', JSON.stringify({ username: username.toLowerCase(), loggedInAt: Date.now() }));
+          setLoading(false);
+          router.replace({ pathname: '/home', params: { userName: 'User' } });
+        } catch (e) {
+          setLoading(false);
+          Alert.alert('Error', 'Could not save user session.');
+        }
+      } else {
+        setLoading(false);
         Alert.alert('Login Failed', 'Invalid username or password.');
       }
     }, 1000);
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" />
-
+    <View style={styles.container}>
       <View style={styles.header}>
-        <View style={styles.logoContainer}>
-          <Ionicons name="person-circle-outline" size={60} color="#fff" />
-        </View>
+        <MaterialIcons name="person-pin" size={80} color={Colors.light.primary} />
         <Text style={styles.title}>Login</Text>
       </View>
 
-      <View style={styles.form}>
-        <TextInput
-          style={styles.input}
-          placeholder="Username (user)"
-          placeholderTextColor="#888"
-          value={username}
-          onChangeText={setUsername}
-          autoCapitalize="none"
-        />
-        <View style={styles.passwordContainer}>
-          <TextInput
-            style={styles.inputPassword}
-            placeholder="Password (password)"
-            placeholderTextColor="#888"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-          />
-          <Ionicons name="lock-closed-outline" size={24} color="#888" style={styles.lockIcon} />
-        </View>
+      <TextInput
+        style={styles.input}
+        placeholder="Username (user)"
+        value={username}
+        onChangeText={setUsername}
+        autoCapitalize="none"
+        editable={isOnline || hasSession}
+      />
+      <TextInput
+        style={styles.input}
+        placeholder="Password (password)"
+        secureTextEntry
+        value={password}
+        onChangeText={setPassword}
+        editable={isOnline || hasSession}
+      />
 
-        <TouchableOpacity style={styles.loginButton} onPress={handleLogin} disabled={isLoading}>
-          {isLoading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.loginButtonText}>Login</Text>
-          )}
-        </TouchableOpacity>
+      <TouchableOpacity 
+        style={styles.loginButton} 
+        onPress={handleLogin} 
+        disabled={loading || (!isOnline && !hasSession)}
+      >
+        {loading ? (
+          <ActivityIndicator color="#fff" />
+        ) : (
+          <Text style={styles.loginButtonText}>Login</Text>
+        )}
+      </TouchableOpacity>
+      
+      {!isOnline && !hasSession && (
+        <Text style={styles.offlineText}>You are offline. Login is disabled.</Text>
+      )}
 
-        <TouchableOpacity style={styles.registerLink}>
-          <Text style={styles.registerText}>
-            New user? <Text style={styles.registerLinkText}>Register here</Text>
-          </Text>
-        </TouchableOpacity>
-      </View>
-
+      <TouchableOpacity onPress={() => router.push('/signup')}>
+        <Text style={styles.registerText}>New user? Register here</Text>
+      </TouchableOpacity>
+      
       <Text style={styles.footerText}>INCLUSIVE BIRTH & ID REGISTRATION</Text>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f0f4f8',
     justifyContent: 'center',
+    paddingHorizontal: 30,
+    backgroundColor: '#fff',
   },
   header: {
     alignItems: 'center',
     marginBottom: 40,
-    paddingHorizontal: 20,
-  },
-  logoContainer: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: '#2563eb',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 10,
-    elevation: 5,
-    shadowColor: '#000',
   },
   title: {
-    fontSize: 32,
+    fontSize: 24,
     fontWeight: 'bold',
-    color: '#2563eb',
-  },
-  form: {
-    width: '100%',
-    paddingHorizontal: 20,
+    color: Colors.light.primary,
+    marginTop: 10,
   },
   input: {
-    backgroundColor: '#fff',
-    paddingHorizontal: 15,
-    paddingVertical: 15,
-    borderRadius: 10,
+    backgroundColor: '#f0f0f0',
+    borderRadius: 8,
+    padding: 15,
+    marginBottom: 15,
     fontSize: 16,
-    marginBottom: 20,
     borderWidth: 1,
     borderColor: '#ddd',
-  },
-  passwordContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    marginBottom: 25,
-  },
-  inputPassword: {
-    flex: 1,
-    paddingHorizontal: 15,
-    paddingVertical: 15,
-    fontSize: 16,
-  },
-  lockIcon: {
-    paddingRight: 15,
   },
   loginButton: {
-    backgroundColor: '#2563eb',
-    paddingVertical: 15,
-    borderRadius: 10,
+    backgroundColor: Colors.light.primary,
+    padding: 18,
+    borderRadius: 8,
     alignItems: 'center',
-    elevation: 3,
-    shadowColor: '#000',
+    marginTop: 10,
   },
   loginButtonText: {
     color: '#fff',
-    fontSize: 18,
     fontWeight: 'bold',
-  },
-  registerLink: {
-    marginTop: 20,
-    alignItems: 'center',
+    fontSize: 18,
   },
   registerText: {
-    fontSize: 14,
-    color: '#555',
+    color: Colors.light.primary,
+    textAlign: 'center',
+    marginTop: 20,
   },
-  registerLinkText: {
-    color: '#2563eb',
-    fontWeight: 'bold',
+  offlineText: {
+    textAlign: 'center',
+    color: 'gray',
+    marginTop: 15,
   },
   footerText: {
     position: 'absolute',
-    bottom: 30,
+    bottom: 40,
     alignSelf: 'center',
-    color: '#888',
+    color: 'gray',
     fontSize: 12,
   },
 });

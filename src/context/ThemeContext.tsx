@@ -3,7 +3,7 @@ import { useColorScheme } from 'react-native';
 
 type ThemeMode = 'light' | 'dark' | 'system';
 
-type ThemeColors = {
+export type ThemeColors = {
   primary: string;
   background: string;
   card: string;

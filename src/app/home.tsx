@@ -10,16 +10,11 @@ import { useTheme } from '../context/ThemeContext';
 // A standard blue color for the theme. You can change this later.
 const THEME_COLOR = '#007AFF';
 
-type MenuItem = {
+interface MenuItem {
   title: string;
   icon: string;
-  screen: '/camera' | '/view-applications';
+  screen: '/camera' | '/view-applications' | '/dashboard';
   params?: { docType: 'birth' | 'id' };
-} | {
-  title: string;
-  icon: string;
-  screen: string;
-  params?: undefined;
 };
 
 export default function HomeScreen() {

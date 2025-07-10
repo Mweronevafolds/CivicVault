@@ -2,9 +2,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useOffline } from '../context/OfflineContext';
+import { ThemeColors, useTheme } from '../context/ThemeContext';
 
 interface FormData {
   fullName: string;
@@ -21,6 +23,7 @@ interface DocumentData {
 }
 
 export default function CameraScreen() {
+  const { colors } = useTheme();
   const router = useRouter();
   const { docType } = useLocalSearchParams<{ docType: 'birth' | 'id' }>();
   const [permission, requestPermission] = useCameraPermissions();
@@ -130,21 +133,24 @@ export default function CameraScreen() {
     setIsSubmitting(false);
   };
   
+  const styles = getThemedStyles(colors);
+  
   if (!permission) {
-    return <View style={styles.centered}><Text>Requesting camera permission...</Text></View>;
+    return <View style={styles.centered}><Text style={{color: colors.text}}>Requesting camera permission...</Text></View>;
   }
 
   if (!permission.granted) {
-    return <View style={styles.centered}><Text>No access to camera</Text></View>;
+    return <View style={styles.centered}><Text style={{color: colors.text}}>No access to camera</Text></View>;
   }
-
+  
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
+      <StatusBar style={colors.background === '#121212' ? 'light' : 'dark'} />
+      <View style={[styles.header, { backgroundColor: colors.primary }]}>
         <TouchableOpacity onPress={handleBack}>
-          <Ionicons name="arrow-back" size={24} color="white" />
+          <Ionicons name="arrow-back" size={24} color={colors.buttonText} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>
+        <Text style={[styles.headerTitle, { color: colors.buttonText }]}>
           {currentStep === 1 && `Capture ${docType === 'birth' ? 'Birth Certificate' : 'ID'}`}
           {currentStep === 2 && 'Review Photo'}
           {currentStep === 3 && (docType === 'birth' ? 'Birth Certificate' : 'ID') + ' Details'}
@@ -161,7 +167,7 @@ export default function CameraScreen() {
           />
           <View style={styles.captureButtonContainer}>
             <TouchableOpacity style={styles.captureButton} onPress={takePicture} disabled={isCapturing}>
-              {isCapturing ? <ActivityIndicator size="large" color="#2563eb" /> : <Ionicons name="camera" size={40} color="#2563eb" />}
+              {isCapturing ? <ActivityIndicator size="large" color={colors.primary} /> : <Ionicons name="camera" size={40} color={colors.primary} />}
             </TouchableOpacity>
           </View>
         </>
@@ -184,11 +190,11 @@ export default function CameraScreen() {
       {currentStep === 3 && (
         <ScrollView contentContainerStyle={styles.formContainer}>
           <Image source={{ uri: capturedImage! }} style={styles.formImage} />
-          <View style={styles.inputContainer}>
+          <View style={[styles.stepContainer, { backgroundColor: colors.card }]}>
             <TextInput
               style={[styles.input, validationErrors.fullName && styles.inputError]}
               placeholder="Full Name *"
-              placeholderTextColor="#888"
+              placeholderTextColor={colors.text + '80'}
               value={formData.fullName}
               onChangeText={text => {
                 setFormData({...formData, fullName: text});
@@ -203,11 +209,11 @@ export default function CameraScreen() {
           </View>
 
 
-          <View style={styles.inputContainer}>
+          <View style={[styles.stepContainer, { backgroundColor: colors.card }]}>
             <TextInput
               style={[styles.input, validationErrors.dateOfBirth && styles.inputError]}
               placeholder="Date of Birth (YYYY-MM-DD) *"
-              placeholderTextColor="#888"
+              placeholderTextColor={colors.text + '80'}
               value={formData.dateOfBirth}
               onChangeText={text => {
                 setFormData({...formData, dateOfBirth: text});
@@ -224,11 +230,11 @@ export default function CameraScreen() {
 
           {docType === 'birth' && (
             <>
-              <View style={styles.inputContainer}>
+              <View style={[styles.stepContainer, { backgroundColor: colors.card }]}>
                 <TextInput
                   style={[styles.input, validationErrors.placeOfBirth && styles.inputError]}
                   placeholder="Place of Birth *"
-                  placeholderTextColor="#888"
+                  placeholderTextColor={colors.text + '80'}
                   value={formData.placeOfBirth}
                   onChangeText={text => {
                     setFormData({...formData, placeOfBirth: text});
@@ -243,7 +249,7 @@ export default function CameraScreen() {
               </View>
 
 
-              <TextInput style={styles.input} placeholder="Parent Names" placeholderTextColor="#888" value={formData.parentNames} onChangeText={text => setFormData({ ...formData, parentNames: text })} />
+              <TextInput style={[styles.input, { color: colors.text, backgroundColor: colors.inputBackground }]} placeholder="Parent Names" placeholderTextColor={colors.text + '80'} value={formData.parentNames} onChangeText={text => setFormData({ ...formData, parentNames: text })} />
 
             </>
           )}
@@ -256,23 +262,93 @@ export default function CameraScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+import { ViewStyle, TextStyle, ImageStyle } from 'react-native';
+
+interface Styles {
+  container: ViewStyle;
+  cameraContainer: ViewStyle;
+  previewImage: ImageStyle;
+  buttonContainer: ViewStyle;
+  button: ViewStyle;
+  buttonText: TextStyle;
+  formContainer: ViewStyle;
+  inputContainer: ViewStyle;
+  inputError: TextStyle;
+  errorText: TextStyle;
+  centered: ViewStyle;
+  header: ViewStyle;
+  headerTitle: TextStyle;
+  camera: ViewStyle;
+  captureButtonContainer: ViewStyle;
+  captureButton: ViewStyle;
+  previewButtons: ViewStyle;
+  usePhotoButton: ViewStyle;
+  usePhotoButtonText: TextStyle;
+  retakeButton: ViewStyle;
+  retakeButtonText: TextStyle;
+  formImage: ImageStyle;
+  input: TextStyle;
+  submitButton: ViewStyle;
+  submitButtonText: TextStyle;
+  stepContainer: ViewStyle;
+  stepText: TextStyle;
+  stepTitle: TextStyle;
+  loadingContainer: ViewStyle;
+  formRow: ViewStyle;
+}
+
+const getThemedStyles = (colors: ThemeColors): Styles => StyleSheet.create<Styles>({
+  container: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  cameraContainer: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  previewImage: {
+    flex: 1,
+    resizeMode: 'contain',
+    margin: 10,
+    borderRadius: 10,
+    backgroundColor: colors.background,
+  },
+  buttonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+    backgroundColor: colors.card,
+  },
+  button: {
+    marginHorizontal: 10,
+    padding: 15,
+    borderRadius: 8,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+  },
+  buttonText: {
+    color: colors.buttonText,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  formContainer: {
+    flex: 1,
+    padding: 20,
+    backgroundColor: colors.background,
+  },
   inputContainer: {
     marginBottom: 15,
   },
   inputError: {
-    borderColor: 'red',
+    borderColor: colors.error,
+    borderWidth: 1,
   },
   errorText: {
-    color: 'red',
+    color: colors.error,
     fontSize: 12,
     marginTop: 4,
     marginLeft: 4,
-  },
-
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
   },
   centered: {
     flex: 1,
@@ -280,7 +356,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   header: {
-    backgroundColor: '#2563eb',
+    backgroundColor: colors.primary,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 12,
@@ -289,7 +365,7 @@ const styles = StyleSheet.create({
     paddingTop: 40,
   },
   headerTitle: {
-    color: 'white',
+    color: colors.buttonText,
     fontSize: 18,
     fontWeight: 'bold',
   },
@@ -303,16 +379,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   captureButton: {
-    backgroundColor: 'white',
+    backgroundColor: colors.card,
     borderRadius: 40,
     padding: 15,
     elevation: 5,
-  },
-  previewImage: {
-    flex: 1,
-    resizeMode: 'contain',
-    margin: 10,
-    borderRadius: 10,
   },
   previewButtons: {
     flexDirection: 'row',
@@ -320,28 +390,25 @@ const styles = StyleSheet.create({
     paddingVertical: 20,
   },
   usePhotoButton: {
-    backgroundColor: '#2563eb',
+    backgroundColor: colors.primary,
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 8,
   },
   usePhotoButtonText: {
-    color: 'white',
+    color: colors.buttonText,
     fontWeight: 'bold',
   },
   retakeButton: {
-    borderColor: '#2563eb',
+    borderColor: colors.primary,
     borderWidth: 2,
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 8,
   },
   retakeButtonText: {
-    color: '#2563eb',
+    color: colors.primary,
     fontWeight: 'bold',
-  },
-  formContainer: {
-    padding: 20,
   },
   formImage: {
     width: '100%',
@@ -351,19 +418,49 @@ const styles = StyleSheet.create({
   },
   input: {
     borderWidth: 1,
-    borderColor: '#d1d5db',
+    borderColor: colors.border,
     borderRadius: 8,
     padding: 12,
     marginBottom: 16,
+    backgroundColor: colors.inputBackground,
+    color: colors.inputText,
   },
+
   submitButton: {
-    backgroundColor: '#2563eb',
+    backgroundColor: colors.primary,
     paddingVertical: 16,
     borderRadius: 8,
     alignItems: 'center',
   },
   submitButtonText: {
-    color: 'white',
+    color: colors.buttonText,
     fontWeight: 'bold',
+  },
+  stepContainer: {
+    marginBottom: 20,
+    backgroundColor: colors.card,
+    borderRadius: 8,
+    padding: 15,
+  },
+  stepText: {
+    color: colors.text,
+    fontSize: 14,
+    marginTop: 5,
+  },
+  stepTitle: {
+    color: colors.primary,
+    fontWeight: 'bold',
+    fontSize: 16,
+    marginBottom: 5,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: colors.background,
+  },
+  formRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
   },
 });

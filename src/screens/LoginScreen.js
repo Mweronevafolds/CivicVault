@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { auth } from '../config/firebase-init';
+import { signInWithEmailAndPassword } from 'firebase/auth';
 
 import {
   StyleSheet,
@@ -9,7 +11,7 @@ import {
   SafeAreaView,
   StatusBar,
   ActivityIndicator,
-  Alert, // NEW: For showing messages
+  Alert,
   KeyboardAvoidingView,
   ScrollView,
   TouchableWithoutFeedback,
@@ -17,8 +19,7 @@ import {
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage'; // NEW: For local storage
-import { useOffline } from '../context/OfflineContext'; // NEW: Our custom hook
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // NEW: A constant for our session key
 const SESSION_KEY = '@CivicVault:userSession';
@@ -37,7 +38,7 @@ const LoginScreen = ({ navigation }) => {
         const savedSession = await AsyncStorage.getItem(SESSION_KEY);
         if (savedSession) {
           console.log('Found offline session, logging in automatically.');
-          navigation.replace('Home'); // Go directly to Home screen
+          navigation.replace('screens/HomeScreen', { userName: username }); // Go directly to HomeScreen.js with username
         }
       } catch (e) {
         console.error('Failed to load offline session', e);
@@ -48,28 +49,35 @@ const LoginScreen = ({ navigation }) => {
   }, [isOnline]); // Reruns if the network status changes
 
   const handleLogin = async () => {
-    console.log('Login initiated - testing navigation only');
     setIsLoading(true);
     
     try {
-      // Test navigation directly without any storage
-      console.log('Attempting navigation to Home screen');
-      navigation.replace('Home');
-      console.log('Navigation command executed');
+      if (!username || !password) {
+        Alert.alert('Error', 'Please enter both email and password');
+        return;
+      }
 
+      const userCredential = await signInWithEmailAndPassword(auth, username, password);
+      console.log('User signed in:', userCredential.user.email);
 
+      // Store user session locally
+      await AsyncStorage.setItem(SESSION_KEY, JSON.stringify({
+        email: userCredential.user.email,
+        uid: userCredential.user.uid,
+        lastLogin: new Date().toISOString()
+      }));
+
+      navigation.replace('screens/HomeScreen', { userName: username });
 
     } catch (error) {
-      console.error('Navigation error:', error);
+      console.error('Login error:', error);
       Alert.alert(
-        'Navigation Test Failed',
-        `Could not navigate to Home screen.\nError: ${error.message}`
+        'Login Failed',
+        error.message || 'An error occurred during login'
       );
-
     } finally {
       setIsLoading(false);
     }
-
   };
 
   return (

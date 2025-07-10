@@ -1,4 +1,7 @@
 import React, { useState } from 'react';
+import { auth } from '../config/firebase-init';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+
 import {
   StyleSheet,
   Text,
@@ -24,7 +27,7 @@ const SignUpScreen = ({ navigation }) => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSignUp = () => {
+  const handleSignUp = async () => {
     if (!username || !password || !confirmPassword) {
       Alert.alert('Error', 'Please fill in all fields.');
       return;
@@ -36,16 +39,20 @@ const SignUpScreen = ({ navigation }) => {
 
     setIsLoading(true);
 
-    // Mock sign-up delay
-    setTimeout(() => {
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, username, password);
+      console.log('User created:', userCredential.user.email);
+      Alert.alert('Success', 'Account created successfully!');
+      navigation.replace('Login');
+    } catch (error) {
+      console.error('Signup error:', error);
+      Alert.alert(
+        'Signup Failed',
+        error.message || 'An error occurred during signup'
+      );
+    } finally {
       setIsLoading(false);
-      Alert.alert('Success', 'Account created successfully!', [
-        {
-          text: 'OK',
-          onPress: () => navigation.replace('Login'),
-        },
-      ]);
-    }, 1500);
+    }
   };
 
   return (

@@ -18,18 +18,24 @@ export default function RootLayout() {
       <OfflineProvider>
         <Stack
           screenOptions={{
+            headerShown: false, // Hide header by default for all screens
             contentStyle: { backgroundColor: 'transparent' },
             headerStyle: {
               backgroundColor: 'transparent',
             },
-            headerTintColor: undefined, // Let the theme handle this
+            headerTintColor: undefined,
             headerTitleStyle: {
-              color: undefined, // Let the theme handle this
+              color: undefined,
             },
           }}
         >
-          <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-          <Stack.Screen name="home" options={{ headerShown: false }} />
+          <Stack.Screen name="(auth)" />
+          <Stack.Screen name="home" />
+          <Stack.Screen name="view-applications" />
+          <Stack.Screen name="camera" />
+          <Stack.Screen name="dashboard" />
+          <Stack.Screen name="document-form" />
+          <Stack.Screen name="signup" />
           <Stack.Screen name="+not-found" />
         </Stack>
       </OfflineProvider>

@@ -1,12 +1,13 @@
-import { Ionicons } from '@expo/vector-icons';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as ImageManipulator from 'expo-image-manipulator';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useState, useEffect, useRef } from 'react';
+import { ActivityIndicator, StyleSheet, Text, View, TouchableOpacity, Image, Alert, ScrollView, TextInput, useColorScheme } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useOffline } from '../context/OfflineContext';
 import { ThemeColors, useTheme } from '../context/ThemeContext';
+import ModernAppBar from '../components/ModernAppBar';
 
 interface FormData {
   fullName: string;
@@ -27,7 +28,10 @@ export default function CameraScreen() {
   const router = useRouter();
   const { docType } = useLocalSearchParams<{ docType: 'birth' | 'id' }>();
   const [permission, requestPermission] = useCameraPermissions();
-  const cameraRef = useRef<any>(null);
+  const cameraRef = useRef<CameraView>(null);
+  const theme = useTheme();
+  const isDark = theme.colors.background === '#121212';
+  const [cameraFacing, setCameraFacing] = useState<'front' | 'back'>('back');
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [isCapturing, setIsCapturing] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
@@ -80,17 +84,71 @@ export default function CameraScreen() {
 
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
-  const validateForm = () => {
+  const validateName = (name: string): boolean => {
+    const nameRegex = /^[A-Za-z\s\-']{2,50}$/;
+    return nameRegex.test(name);
+  };
+
+  const validateDateOfBirth = (dob: string): boolean => {
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!dateRegex.test(dob)) return false;
+    
+    const date = new Date(dob);
+    const today = new Date();
+    const minDate = new Date();
+    minDate.setFullYear(today.getFullYear() - 120); // Max age 120 years
+    
+    return date <= today && date >= minDate;
+  };
+
+  const validatePlace = (place: string): boolean => {
+    const placeRegex = /^[A-Za-z\s\-',.]{2,100}$/;
+    return placeRegex.test(place);
+  };
+
+  const formatDateInput = (text: string): string => {
+    // Remove all non-digit characters
+    let cleaned = text.replace(/\D/g, '');
+    
+    // Format as YYYY-MM-DD
+    if (cleaned.length > 4) {
+      cleaned = `${cleaned.slice(0, 4)}-${cleaned.slice(4, 6)}-${cleaned.slice(6, 8)}`;
+    } else if (cleaned.length > 4) {
+      cleaned = `${cleaned.slice(0, 4)}-${cleaned.slice(4, 6)}`;
+    }
+    
+    return cleaned.slice(0, 10);
+  };
+
+  const validateForm = (): boolean => {
     const errors: Record<string, string> = {};
     
+    // Full Name validation
     if (!formData.fullName.trim()) {
       errors.fullName = 'Full Name is required';
+    } else if (!validateName(formData.fullName)) {
+      errors.fullName = 'Please enter a valid name (2-50 characters, letters and spaces only)';
     }
+    
+    // Date of Birth validation
     if (!formData.dateOfBirth.trim()) {
       errors.dateOfBirth = 'Date of Birth is required';
+    } else if (!validateDateOfBirth(formData.dateOfBirth)) {
+      errors.dateOfBirth = 'Please enter a valid date (YYYY-MM-DD)';
     }
-    if (docType === 'birth' && !formData.placeOfBirth.trim()) {
-      errors.placeOfBirth = 'Place of Birth is required';
+    
+    // Place of Birth validation (only for birth certificate)
+    if (docType === 'birth') {
+      if (!formData.placeOfBirth.trim()) {
+        errors.placeOfBirth = 'Place of Birth is required';
+      } else if (!validatePlace(formData.placeOfBirth)) {
+        errors.placeOfBirth = 'Please enter a valid place name';
+      }
+    }
+    
+    // Parent Names validation (only for birth certificate)
+    if (docType === 'birth' && formData.parentNames.trim() && !validateName(formData.parentNames)) {
+      errors.parentNames = 'Please enter valid names (2-50 characters, letters and spaces only)';
     }
 
     setValidationErrors(errors);
@@ -99,36 +157,49 @@ export default function CameraScreen() {
 
   const submitDocument = async () => {
     if (!validateForm()) {
-      Alert.alert(
-        "Validation Error", 
-        "Please fill in all required fields correctly."
-      );
+      // Scroll to the first error if there are any
+      const firstError = Object.keys(validationErrors)[0];
+      if (firstError) {
+        const errorElement = document.getElementById(firstError);
+        errorElement?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
       return;
     }
 
     setIsSubmitting(true);
+    
+    // Format data before submission
+    const formattedFormData: FormData = {
+      ...formData,
+      fullName: formData.fullName.trim().replace(/\s+/g, ' '),
+      dateOfBirth: formData.dateOfBirth.trim(),
+      placeOfBirth: formData.placeOfBirth.trim(),
+      parentNames: formData.parentNames.trim(),
+    };
+
     const documentData: DocumentData = {
       docType: docType!,
       imageUri: capturedImage,
-      formData,
+      formData: formattedFormData,
       timestamp: Date.now(),
     };
 
-
-    if (isOnline) {
-      try {
+    try {
+      if (isOnline) {
         await new Promise(resolve => setTimeout(resolve, 1500));
         Alert.alert('Success', 'Document submitted successfully');
-        router.replace('/home');
-      } catch (error) {
-        Alert.alert('Error', 'Submission failed. Saving offline.');
+      } else {
         addToQueue(documentData);
-        router.replace('/home');
+        Alert.alert('Offline', 'No connection. Document saved and will sync when you are back online.');
       }
-    } else {
-      addToQueue(documentData);
-      Alert.alert('Offline', 'No connection. Document saved and will sync when you are back online.');
       router.replace('/home');
+    } catch (error) {
+      console.error('Submission error:', error);
+      Alert.alert('Error', 'An error occurred. Your document has been saved and will sync when you are back online.');
+      addToQueue(documentData);
+      router.replace('/home');
+    } finally {
+      setIsSubmitting(false);
     }
     setIsSubmitting(false);
   };
@@ -136,41 +207,72 @@ export default function CameraScreen() {
   const styles = getThemedStyles(colors);
   
   if (!permission) {
-    return <View style={styles.centered}><Text style={{color: colors.text}}>Requesting camera permission...</Text></View>;
+    return (
+      <View style={styles.container}>
+        <ModernAppBar 
+          title="Camera" 
+          onBack={() => router.back()}
+          elevation={0}
+        />
+        <View style={styles.permissionContent}>
+          <Text style={[styles.permissionText, { color: colors.text }]}>
+            Requesting camera permission...
+          </Text>
+        </View>
+      </View>
+    );
   }
 
   if (!permission.granted) {
-    return <View style={styles.centered}><Text style={{color: colors.text}}>No access to camera</Text></View>;
+    return (
+      <View style={styles.container}>
+        <ModernAppBar 
+          title="Camera" 
+          onBack={() => router.back()}
+          elevation={0}
+        />
+        <View style={styles.permissionContent}>
+          <Text style={[styles.permissionText, { color: colors.text }]}>
+            No access to camera
+          </Text>
+        </View>
+      </View>
+    );
   }
   
   return (
-    <View style={styles.container}>
-      <StatusBar style={colors.background === '#121212' ? 'light' : 'dark'} />
-      <View style={[styles.header, { backgroundColor: colors.primary }]}>
-        <TouchableOpacity onPress={handleBack}>
-          <Ionicons name="arrow-back" size={24} color={colors.buttonText} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.buttonText }]}>
-          {currentStep === 1 && `Capture ${docType === 'birth' ? 'Birth Certificate' : 'ID'}`}
-          {currentStep === 2 && 'Review Photo'}
-          {currentStep === 3 && (docType === 'birth' ? 'Birth Certificate' : 'ID') + ' Details'}
-        </Text>
-        <View style={{ width: 24 }} />
-      </View>
-
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <StatusBar style={isDark ? 'light' : 'dark'} />
+      
       {currentStep === 1 && (
-        <>
-          <CameraView 
-            style={styles.camera}
-            facing="back"
-            ref={cameraRef}
-          />
-          <View style={styles.captureButtonContainer}>
-            <TouchableOpacity style={styles.captureButton} onPress={takePicture} disabled={isCapturing}>
-              {isCapturing ? <ActivityIndicator size="large" color={colors.primary} /> : <Ionicons name="camera" size={40} color={colors.primary} />}
-            </TouchableOpacity>
-          </View>
-        </>
+        <View style={styles.cameraContainer}>
+            <CameraView
+              style={styles.camera}
+              facing={cameraFacing}
+              ref={cameraRef}
+            >
+            <ModernAppBar 
+              title="Take Photo" 
+              onBack={handleBack}
+              rightContent={
+                <TouchableOpacity
+                  style={styles.flipButton}
+                  onPress={() => {
+                    setCameraFacing(prev => prev === 'back' ? 'front' : 'back');
+                  }}
+                >
+                  <Ionicons name="camera-reverse" size={24} color="white" />
+                </TouchableOpacity>
+              }
+              style={{ backgroundColor: 'rgba(0,0,0,0.3)' }}
+            />
+            <View style={styles.captureButtonContainer}>
+              <TouchableOpacity style={styles.captureButton} onPress={takePicture} disabled={isCapturing}>
+                {isCapturing ? <ActivityIndicator size="large" color={colors.primary} /> : <Ionicons name="camera" size={40} color={colors.primary} />}
+              </TouchableOpacity>
+            </View>
+          </CameraView>
+        </View>
       )}
 
       {currentStep === 2 && capturedImage && (
@@ -188,69 +290,106 @@ export default function CameraScreen() {
       )}
 
       {currentStep === 3 && (
-        <ScrollView contentContainerStyle={styles.formContainer}>
+        <ScrollView 
+          contentContainerStyle={styles.formContainer}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
           <Image source={{ uri: capturedImage! }} style={styles.formImage} />
           <View style={[styles.stepContainer, { backgroundColor: colors.card }]}>
             <TextInput
+              id="fullName"
               style={[styles.input, validationErrors.fullName && styles.inputError]}
               placeholder="Full Name *"
               placeholderTextColor={colors.text + '80'}
               value={formData.fullName}
               onChangeText={text => {
-                setFormData({...formData, fullName: text});
+                // Only allow letters, spaces, hyphens, and apostrophes
+                const cleanedText = text.replace(/[^A-Za-z\s\-']/g, '');
+                setFormData({...formData, fullName: cleanedText});
                 if (validationErrors.fullName) {
                   setValidationErrors(prev => ({...prev, fullName: ''}));
                 }
               }}
+              maxLength={50}
+              autoCapitalize="words"
+              autoComplete="name"
+              textContentType="name"
             />
             {validationErrors.fullName && (
               <Text style={styles.errorText}>{validationErrors.fullName}</Text>
             )}
           </View>
 
-
           <View style={[styles.stepContainer, { backgroundColor: colors.card }]}>
             <TextInput
+              id="dateOfBirth"
               style={[styles.input, validationErrors.dateOfBirth && styles.inputError]}
               placeholder="Date of Birth (YYYY-MM-DD) *"
               placeholderTextColor={colors.text + '80'}
               value={formData.dateOfBirth}
               onChangeText={text => {
-                setFormData({...formData, dateOfBirth: text});
+                const formattedText = formatDateInput(text);
+                setFormData({...formData, dateOfBirth: formattedText});
                 if (validationErrors.dateOfBirth) {
                   setValidationErrors(prev => ({...prev, dateOfBirth: ''}));
                 }
               }}
+              keyboardType="number-pad"
+              maxLength={10}
             />
             {validationErrors.dateOfBirth && (
               <Text style={styles.errorText}>{validationErrors.dateOfBirth}</Text>
             )}
           </View>
 
-
           {docType === 'birth' && (
             <>
               <View style={[styles.stepContainer, { backgroundColor: colors.card }]}>
                 <TextInput
+                  id="placeOfBirth"
                   style={[styles.input, validationErrors.placeOfBirth && styles.inputError]}
                   placeholder="Place of Birth *"
                   placeholderTextColor={colors.text + '80'}
                   value={formData.placeOfBirth}
                   onChangeText={text => {
-                    setFormData({...formData, placeOfBirth: text});
+                    // Only allow letters, spaces, hyphens, commas, and periods
+                    const cleanedText = text.replace(/[^A-Za-z\s\-',.]/g, '');
+                    setFormData({...formData, placeOfBirth: cleanedText});
                     if (validationErrors.placeOfBirth) {
                       setValidationErrors(prev => ({...prev, placeOfBirth: ''}));
                     }
                   }}
+                  maxLength={100}
+                  autoCapitalize="words"
                 />
                 {validationErrors.placeOfBirth && (
                   <Text style={styles.errorText}>{validationErrors.placeOfBirth}</Text>
                 )}
               </View>
 
-
-              <TextInput style={[styles.input, { color: colors.text, backgroundColor: colors.inputBackground }]} placeholder="Parent Names" placeholderTextColor={colors.text + '80'} value={formData.parentNames} onChangeText={text => setFormData({ ...formData, parentNames: text })} />
-
+              <View style={[styles.stepContainer, { backgroundColor: colors.card }]}>
+                <TextInput 
+                  id="parentNames"
+                  style={[styles.input, validationErrors.parentNames && styles.inputError, { color: colors.text, backgroundColor: colors.inputBackground }]} 
+                  placeholder="Parent Names (Optional)" 
+                  placeholderTextColor={colors.text + '80'} 
+                  value={formData.parentNames} 
+                  onChangeText={text => {
+                    // Only allow letters, spaces, hyphens, and apostrophes
+                    const cleanedText = text.replace(/[^A-Za-z\s\-']/g, '');
+                    setFormData({ ...formData, parentNames: cleanedText });
+                    if (validationErrors.parentNames) {
+                      setValidationErrors(prev => ({...prev, parentNames: ''}));
+                    }
+                  }}
+                  maxLength={100}
+                  autoCapitalize="words"
+                />
+                {validationErrors.parentNames && (
+                  <Text style={styles.errorText}>{validationErrors.parentNames}</Text>
+                )}
+              </View>
             </>
           )}
           <TouchableOpacity style={styles.submitButton} onPress={submitDocument} disabled={isSubmitting}>
@@ -295,12 +434,17 @@ interface Styles {
   stepTitle: TextStyle;
   loadingContainer: ViewStyle;
   formRow: ViewStyle;
+  permissionContainer: ViewStyle;
+  permissionContent: ViewStyle;
+  permissionText: TextStyle;
+  flipButton: ViewStyle;
 }
 
 const getThemedStyles = (colors: ThemeColors): Styles => StyleSheet.create<Styles>({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+    position: 'relative',
   },
   cameraContainer: {
     flex: 1,
@@ -333,8 +477,9 @@ const getThemedStyles = (colors: ThemeColors): Styles => StyleSheet.create<Style
     fontWeight: '600',
   },
   formContainer: {
-    flex: 1,
+    flexGrow: 1,
     padding: 20,
+    paddingBottom: 30,
     backgroundColor: colors.background,
   },
   inputContainer: {
@@ -343,12 +488,14 @@ const getThemedStyles = (colors: ThemeColors): Styles => StyleSheet.create<Style
   inputError: {
     borderColor: colors.error,
     borderWidth: 1,
+    backgroundColor: colors.error + '10',
   },
   errorText: {
     color: colors.error,
     fontSize: 12,
     marginTop: 4,
     marginLeft: 4,
+    marginBottom: 8,
   },
   centered: {
     flex: 1,
@@ -374,9 +521,10 @@ const getThemedStyles = (colors: ThemeColors): Styles => StyleSheet.create<Style
   },
   captureButtonContainer: {
     position: 'absolute',
-    bottom: 30,
+    bottom: 40,
     width: '100%',
     alignItems: 'center',
+    justifyContent: 'center',
   },
   captureButton: {
     backgroundColor: colors.card,
@@ -420,17 +568,19 @@ const getThemedStyles = (colors: ThemeColors): Styles => StyleSheet.create<Style
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: 8,
-    padding: 12,
+    padding: 14,
     marginBottom: 16,
     backgroundColor: colors.inputBackground,
-    color: colors.inputText,
+    color: colors.text,
+    fontSize: 15,
   },
-
   submitButton: {
     backgroundColor: colors.primary,
     paddingVertical: 16,
     borderRadius: 8,
     alignItems: 'center',
+    marginTop: 10,
+    marginBottom: 30,
   },
   submitButtonText: {
     color: colors.buttonText,
@@ -462,5 +612,24 @@ const getThemedStyles = (colors: ThemeColors): Styles => StyleSheet.create<Style
   formRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+  },
+  permissionContainer: {
+    flex: 1,
+  },
+  permissionContent: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: -50, // Offset for the app bar
+  },
+  permissionText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  flipButton: {
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    padding: 8,
+    borderRadius: 20,
+    marginLeft: 8,
   },
 });

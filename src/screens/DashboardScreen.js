@@ -5,11 +5,11 @@ import {
   View,
   SafeAreaView,
   ScrollView,
-  Dimensions,
+  TouchableOpacity,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import MapView, { Marker } from 'react-native-maps';
-import { Stack } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 
 // --- NEW: Personalized Mock Data for "Abdi" ---
 // This data represents what would be fetched from the backend for the logged-in user.
@@ -30,11 +30,13 @@ const recentActivity = [
 
 // Locations of the user's submissions
 const userSubmissionLocations = [
-    { id: '1', lat: -1.286389, lon: 36.817223, title: 'ID Request - Approved' },
-    { id: '2', lat: -1.292066, lon: 36.821945, title: 'Birth Cert - Pending' },
+  { id: '1', lat: -1.286389, lon: 36.817223, title: 'ID Request - Approved' },
+  { id: '2', lat: -1.292066, lon: 36.821945, title: 'Birth Cert - Pending' },
 ];
 
 const DashboardScreen = () => {
+  const router = useRouter();
+
   // Helper to render the new personalized metric cards
   const renderMetricCard = (title, value, iconName, color) => (
     <View style={styles.metricCard}>
@@ -48,16 +50,32 @@ const DashboardScreen = () => {
   const renderActivityItem = ({ item }) => {
     const isApproved = item.status === 'Approved';
     return (
-        <View style={styles.activityItem}>
-            <View style={[styles.activityIconContainer, { backgroundColor: isApproved ? '#dcfce7' : '#fef9c3' }]}>
-                <Ionicons name={isApproved ? 'checkmark-circle' : 'time'} size={24} color={isApproved ? '#22c55e' : '#f59e0b'} />
-            </View>
-            <View style={styles.activityDetails}>
-                <Text style={styles.activityType}>{item.type}</Text>
-                <Text style={styles.activityDate}>{item.date}</Text>
-            </View>
-            <Text style={[styles.activityStatus, { color: isApproved ? '#22c55e' : '#f59e0b' }]}>{item.status}</Text>
+      <View key={item.id} style={styles.activityItem}>
+        <View
+          style={[
+            styles.activityIconContainer,
+            { backgroundColor: isApproved ? '#dcfce7' : '#fef9c3' },
+          ]}
+        >
+          <Ionicons
+            name={isApproved ? 'checkmark-circle' : 'time'}
+            size={24}
+            color={isApproved ? '#22c55e' : '#f59e0b'}
+          />
         </View>
+        <View style={styles.activityDetails}>
+          <Text style={styles.activityType}>{item.type}</Text>
+          <Text style={styles.activityDate}>{item.date}</Text>
+        </View>
+        <Text
+          style={[
+            styles.activityStatus,
+            { color: isApproved ? '#22c55e' : '#f59e0b' },
+          ]}
+        >
+          {item.status}
+        </Text>
+      </View>
     );
   };
 
@@ -76,24 +94,65 @@ const DashboardScreen = () => {
       />
       <ScrollView contentContainerStyle={styles.scrollContainer}>
         <View style={styles.metricsGrid}>
-          {renderMetricCard('My Submissions', userDashboardData.totalSubmissions, 'document-text-outline', '#2563eb')}
-          {renderMetricCard('Approved', userDashboardData.approvedSubmissions, 'shield-checkmark-outline', '#22c55e')}
-          {renderMetricCard('Pending', userDashboardData.pendingSubmissions, 'hourglass-outline', '#f59e0b')}
-          {renderMetricCard('Offline Queue', userDashboardData.offlineQueue, 'cloud-offline-outline', '#6b7280')}
+          {renderMetricCard(
+            'My Submissions',
+            userDashboardData.totalSubmissions,
+            'document-text-outline',
+            '#2563eb'
+          )}
+          {renderMetricCard(
+            'Approved',
+            userDashboardData.approvedSubmissions,
+            'shield-checkmark-outline',
+            '#22c55e'
+          )}
+          {renderMetricCard(
+            'Pending',
+            userDashboardData.pendingSubmissions,
+            'hourglass-outline',
+            '#f59e0b'
+          )}
+          {renderMetricCard(
+            'Offline Queue',
+            userDashboardData.offlineQueue,
+            'cloud-offline-outline',
+            '#6b7280'
+          )}
         </View>
 
         <Text style={styles.sectionTitle}>My Submission Locations</Text>
-        <View style={styles.mapContainer}>
-            <MapView style={styles.map} initialRegion={{ latitude: -1.29, longitude: 36.82, latitudeDelta: 0.09, longitudeDelta: 0.04 }}>
-                {userSubmissionLocations.map(marker => (
-                    <Marker key={marker.id} coordinate={{ latitude: marker.lat, longitude: marker.lon }} title={marker.title} />
-                ))}
-            </MapView>
-        </View>
+        <TouchableOpacity
+          style={styles.mapContainer}
+          onPress={() => router.push('/map-modal')}
+        >
+          <MapView
+            style={styles.map}
+            initialRegion={{
+              latitude: -1.29,
+              longitude: 36.82,
+              latitudeDelta: 0.09,
+              longitudeDelta: 0.04,
+            }}
+            scrollEnabled={false}
+            zoomEnabled={false}
+          >
+            {userSubmissionLocations.map(marker => (
+              <Marker
+                key={marker.id}
+                coordinate={{ latitude: marker.lat, longitude: marker.lon }}
+                title={marker.title}
+              />
+            ))}
+          </MapView>
+          <View style={styles.mapOverlay}>
+            <Text style={styles.mapOverlayText}>View Community Map</Text>
+            <Ionicons name="expand" size={20} color="#fff" />
+          </View>
+        </TouchableOpacity>
 
         <Text style={styles.sectionTitle}>Recent Activity</Text>
         <View style={styles.activityList}>
-            {recentActivity.map(item => renderActivityItem({ item }))}
+          {recentActivity.map(item => renderActivityItem({ item }))}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -158,9 +217,24 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     overflow: 'hidden',
     marginBottom: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   map: {
     ...StyleSheet.absoluteFillObject,
+  },
+  mapOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    flexDirection: 'row',
+  },
+  mapOverlayText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
+    marginRight: 8,
   },
   activityList: {
     backgroundColor: '#fff',

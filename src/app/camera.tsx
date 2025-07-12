@@ -246,32 +246,31 @@ export default function CameraScreen() {
       
       {currentStep === 1 && (
         <View style={styles.cameraContainer}>
-            <CameraView
-              style={styles.camera}
-              facing={cameraFacing}
-              ref={cameraRef}
-            >
-            <ModernAppBar 
-              title="Take Photo" 
-              onBack={handleBack}
-              rightContent={
-                <TouchableOpacity
-                  style={styles.flipButton}
-                  onPress={() => {
-                    setCameraFacing(prev => prev === 'back' ? 'front' : 'back');
-                  }}
-                >
-                  <Ionicons name="camera-reverse" size={24} color="white" />
-                </TouchableOpacity>
-              }
-              style={{ backgroundColor: 'rgba(0,0,0,0.3)' }}
-            />
-            <View style={styles.captureButtonContainer}>
-              <TouchableOpacity style={styles.captureButton} onPress={takePicture} disabled={isCapturing}>
-                {isCapturing ? <ActivityIndicator size="large" color={colors.primary} /> : <Ionicons name="camera" size={40} color={colors.primary} />}
+          <CameraView
+            style={styles.camera}
+            facing={cameraFacing}
+            ref={cameraRef}
+          />
+          <ModernAppBar 
+            title="Take Photo" 
+            onBack={handleBack}
+            rightContent={
+              <TouchableOpacity
+                style={styles.flipButton}
+                onPress={() => {
+                  setCameraFacing(prev => prev === 'back' ? 'front' : 'back');
+                }}
+              >
+                <Ionicons name="camera-reverse" size={24} color="white" />
               </TouchableOpacity>
-            </View>
-          </CameraView>
+            }
+            style={{ backgroundColor: 'rgba(0,0,0,0.3)', position: 'absolute', top: 0, left: 0, right: 0 }}
+          />
+          <View style={[styles.captureButtonContainer, { position: 'absolute', bottom: 40, left: 0, right: 0 }]}>
+            <TouchableOpacity style={styles.captureButton} onPress={takePicture} disabled={isCapturing}>
+              {isCapturing ? <ActivityIndicator size="large" color={colors.primary} /> : <Ionicons name="camera" size={40} color={colors.primary} />}
+            </TouchableOpacity>
+          </View>
         </View>
       )}
 

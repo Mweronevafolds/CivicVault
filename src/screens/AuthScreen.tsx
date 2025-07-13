@@ -1,9 +1,7 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, useColorScheme } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { auth } from '../config/firebase-init';
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
-import { UserCredential, AuthError } from 'firebase/auth';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
+import { useRouter } from 'expo-router';
+import { supabase } from '../config/client';
 import { useTheme } from '../context/ThemeContext';
 
 const AuthScreen = () => {
@@ -11,60 +9,67 @@ const AuthScreen = () => {
   const [password, setPassword] = useState('');
   const [isSignUp, setIsSignUp] = useState(true);
   const [error, setError] = useState('');
-  const navigation = useNavigation();
+  const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
 
-  const getFriendlyErrorMessage = (errorCode: string) => {
-    switch (errorCode) {
-      case 'auth/invalid-email':
-        return 'Please enter a valid email address';
-      case 'auth/user-disabled':
-        return 'This account has been disabled';
-      case 'auth/user-not-found':
-        return 'No account found with this email';
-      case 'auth/wrong-password':
-        return 'Incorrect password. Please try again';
-      case 'auth/email-already-in-use':
-        return 'An account already exists with this email';
-      case 'auth/weak-password':
-        return 'Password should be at least 6 characters';
-      case 'auth/network-request-failed':
-        return 'Network error. Please check your connection';
-      default:
-        return 'An error occurred. Please try again';
+  const handleSignIn = async () => {
+    if (!email || !password) {
+      setError('Please enter email and password.');
+      return;
+    }
+    
+    setIsLoading(true);
+    try {
+      setError('');
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      
+      if (error) {
+        throw error;
+      }
+      
+      console.log('User signed in:', email);
+      router.replace('/home');
+    } catch (error: any) {
+      console.error('Sign in error:', error);
+      setError(error.message || 'Failed to sign in. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleSignUp = async () => {
     if (!email || !password) {
-      setError('Please fill in all fields');
+      setError('Please enter email and password.');
       return;
     }
-
+    
+    setIsLoading(true);
     try {
       setError('');
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      console.log('User signed up:', userCredential.user.email);
-      navigation.navigate('home', { userName: email });
-    } catch (err: any) {
-      console.error('Sign up error:', err);
-      setError(getFriendlyErrorMessage(err.code));
-    }
-  };
-
-  const handleSignIn = async () => {
-    if (!email || !password) {
-      setError('Please fill in all fields');
-      return;
-    }
-
-    try {
-      setError('');
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      console.log('User signed in:', userCredential.user.email);
-      navigation.navigate('home', { userName: email });
-    } catch (err: any) {
-      console.error('Sign in error:', err);
-      setError(getFriendlyErrorMessage(err.code));
+      const { error } = await supabase.auth.signUp({ 
+        email, 
+        password,
+        options: {
+          emailRedirectTo: 'civicvault://home',
+        },
+      });
+      
+      if (error) {
+        throw error;
+      }
+      
+      Alert.alert(
+        'Check your email',
+        'We\'ve sent you a confirmation email. Please verify your email address to complete registration.'
+      );
+      
+      // Switch to sign in view after successful sign up
+      setIsSignUp(false);
+    } catch (error: any) {
+      console.error('Sign up error:', error);
+      setError(error.message || 'Failed to create account. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -162,10 +167,15 @@ const AuthScreen = () => {
       <TouchableOpacity 
         style={themedStyles.button} 
         onPress={isSignUp ? handleSignUp : handleSignIn}
+        disabled={isLoading}
       >
-        <Text style={themedStyles.buttonText}>
-          {isSignUp ? 'Sign Up' : 'Sign In'}
-        </Text>
+        {isLoading ? (
+          <ActivityIndicator color={colors.buttonText} />
+        ) : (
+          <Text style={themedStyles.buttonText}>
+            {isSignUp ? 'Sign Up' : 'Sign In'}
+          </Text>
+        )}
       </TouchableOpacity>
 
       <TouchableOpacity 

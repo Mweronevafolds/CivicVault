@@ -1,345 +1,144 @@
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { onAuthStateChanged, User } from 'firebase/auth';
-import { useEffect, useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { auth } from '../config/firebase-init';
-import { useTheme } from '../context/ThemeContext';
+import React, { useState, useEffect } from 'react';
+import {
+  View, Text, SafeAreaView, StyleSheet, Platform,
+  TouchableOpacity, FlatList, ActivityIndicator, RefreshControl
+} from 'react-native';
+import { Stack, useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { useAuth } from '../../src/context/AuthContext';
+import { getPendingSubmissionsForAdmin } from '../../src/api/ApiService';
 
-// A standard blue color for the theme. You can change this later.
-const THEME_COLOR = '#007AFF';
-
-interface MenuItem {
-  title: string;
-  icon: string;
-  screen: '/camera' | '/view-applications' | '/dashboard';
-  params?: { docType: 'birth' | 'id' };
+type Submission = {
+  id: string;
+  doc_type: string;
+  full_name: string;
+  created_at: string;
+  status?: string;
 };
 
-export default function HomeScreen() {
-  const [user, setUser] = useState<User | null>(null);
-  const theme = useTheme();
-  const router = useRouter();
-  const colors = theme.colors;
+type Profile = {
+  username?: string;
+};
 
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user: User | null) => {
-      setUser(user);
-      if (!user) {
-        router.replace('/auth');
-      }
-    });
+// --- Admin Panel Component (for Web) ---
+const AdminDashboard = () => {
+    const [applications, setApplications] = useState<Submission[]>([]);
+    const [loading, setLoading] = useState(true);
 
-    return () => unsubscribe();
-  }, [router]);
-  
-  // Remove unused useLocalSearchParams since we're using user from auth state
-  const handleLogout = async () => {
-    try {
-      await auth.signOut();
-      // The auth state listener in the useEffect will handle the redirect
-    } catch (error) {
-      console.error('Error signing out:', error);
-    }
-  };
+    const fetchData = async () => {
+        setLoading(true);
+        try {
+            const pendingApps = await getPendingSubmissionsForAdmin();
+            setApplications(pendingApps || []);
+        } catch (error: unknown) {
+            if (error instanceof Error) {
+                console.error(error.message);
+            } else {
+                console.error('Unknown error occurred');
+            }
+        } finally {
+            setLoading(false);
+        }
+    };
 
-  const menuItems = [
-    { title: 'Register Birth', icon: 'baby-face-outline', screen: '/camera', params: { docType: 'birth' } },
-    { title: 'Request ID', icon: 'card-account-details-outline', screen: '/camera', params: { docType: 'id' } },
-    { title: 'View My Applications', icon: 'file-document-multiple-outline', screen: '/view-applications' },
-    { title: 'Dashboard', icon: 'view-dashboard-outline', screen: '/dashboard' },
-  ] as MenuItem[];
+    useEffect(() => {
+        fetchData();
+    }, []);
 
-  const displayName = user?.displayName || (user?.email ? user.email.split('@')[0] : 'User');
-  
-  const themedStyles = StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: theme.colors.background,
-    },
-    // Header Styles with curved bottom
-    headerContainer: {
-      paddingTop: 50,
-      paddingBottom: 35, // Extra padding at bottom for the curve
-      paddingHorizontal: 20,
-      backgroundColor: theme.colors.primary,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.1,
-      shadowRadius: 8,
-      elevation: 6,
-      marginBottom: 20,
-      borderBottomLeftRadius: 24,
-      borderBottomRightRadius: 24,
-      overflow: 'hidden',
-    },
-    headerContent: {
-      flexDirection: 'row',
-      alignItems: 'center',
-    },
-    greetingContainer: {
-      flex: 1,
-    },
-    welcomeText: {
-      fontSize: 20,
-      marginBottom: 8,
-      fontWeight: '500',
-      color: colors.text,
-      lineHeight: 28,
-    },
-    subtitle: {
-      fontSize: 15,
-      fontFamily: 'System',
-      opacity: 0.8,
-    },
-
-    userEmail: {
-      fontSize: 14,
-      color: theme.colors.text + '99',
-      fontFamily: 'System',
-    },
-
-
-    grid: {
-      flex: 1,
-      padding: 20,
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      justifyContent: 'space-between',
-      paddingTop: 30,
-    },
-    card: {
-      width: '47%',
-      aspectRatio: 1,
-      backgroundColor: colors.card,
-      padding: 20,
-      marginBottom: 16,
-      justifyContent: 'center',
-      alignItems: 'center',
-      borderRadius: 16,
-      shadowColor: colors.primary + '40',
-      shadowOffset: { width: 0, height: 6 },
-      shadowOpacity: 0.2,
-      shadowRadius: 8,
-      elevation: 4,
-      borderWidth: 1,
-      borderColor: colors.border + '20',
-      transform: [{ translateY: 0 }],
-    },
-    cardActive: {
-      transform: [{ translateY: -2 }],
-      shadowOffset: { width: 0, height: 8 },
-      shadowOpacity: 0.25,
-      shadowRadius: 10,
-      elevation: 6,
-    },
-    cardText: {
-      marginTop: 8,
-      textAlign: 'center',
-      color: colors.text,
-      fontSize: 14,
-    },
-    cardTitle: {
-      marginTop: 12,
-      textAlign: 'center',
-      color: colors.text,
-      fontSize: 15,
-      fontWeight: '600',
-      fontFamily: 'System',
-      letterSpacing: 0.3,
-    },
-    footerText: {
-      position: 'absolute',
-      bottom: 20,
-      alignSelf: 'center',
-      color: 'gray',
-      fontSize: 12,
-    },
-    logoutButtonContainer: {
-      position: 'absolute',
-      bottom: 40,
-      width: '100%',
-      alignItems: 'center',
-      paddingHorizontal: 30,
-    },
-    logoutButton: {
-      backgroundColor: colors.error,
-      paddingVertical: 14,
-      paddingHorizontal: 28,
-      borderRadius: 12,
-      flexDirection: 'row' as const,
-      alignItems: 'center',
-      justifyContent: 'center',
-      shadowColor: colors.error,
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.3,
-      shadowRadius: 6,
-      elevation: 5,
-      width: '100%',
-      maxWidth: 220,
-      transform: [{ translateY: 0 }],
-    },
-    logoutButtonActive: {
-      transform: [{ translateY: -2 }],
-      shadowOffset: { width: 0, height: 6 },
-      shadowOpacity: 0.4,
-      shadowRadius: 8,
-      elevation: 7,
-    },
-    logoutButtonText: {
-      color: '#fff',
-      fontWeight: '600',
-      fontSize: 16,
-      marginLeft: 10,
-      letterSpacing: 0.5,
-      textShadowColor: 'rgba(0, 0, 0, 0.1)',
-      textShadowOffset: { width: 0, height: 1 },
-      textShadowRadius: 2,
-    },
-    logoutIcon: {
-      marginRight: 6,
-      textShadowColor: 'rgba(0, 0, 0, 0.1)',
-      textShadowOffset: { width: 0, height: 1 },
-      textShadowRadius: 2,
-    },
-    iconContainer: {
-      width: 56,
-      height: 56,
-      borderRadius: 28,
-      backgroundColor: colors.primary + '15',
-      justifyContent: 'center',
-      alignItems: 'center',
-      marginBottom: 12,
-    },
-  });
-
-
-  
-  // Format the display name or extract from email if not available
-  const getDisplayName = () => {
-    // If display name is available, format it properly
-    if (user?.displayName) {
-      return user.displayName
-        .split(' ')
-        .map(name => name.charAt(0).toUpperCase() + name.slice(1).toLowerCase())
-        .join(' ');
-    }
-    
-    // If email is available, extract the username part (before @)
-    if (user?.email) {
-      const email = user.email;
-      const atIndex = email.indexOf('@');
-      if (atIndex > 0) {
-        const username = email.substring(0, atIndex);
-        // Remove any numbers or special characters and format
-        return username
-          .replace(/[0-9._-]/g, ' ')
-          .split(' ')
-          .filter(Boolean)
-          .map(name => name.charAt(0).toUpperCase() + name.slice(1).toLowerCase())
-          .join(' ');
-      }
-      return email;
-    }
-    
-    return 'User';
-  };
-  
-  const formattedDisplayName = getDisplayName();
-
-  // Create menu item components with their own state
-  const MenuItemButton = ({ item }: { item: typeof menuItems[0] }) => {
-    const [isPressed, setIsPressed] = useState(false);
-    
-    return (
-      <TouchableOpacity
-        style={[
-          themedStyles.card,
-          isPressed && themedStyles.cardActive,
-          { backgroundColor: theme.colors.card }
-        ]}
-        activeOpacity={0.9}
-        onPressIn={() => setIsPressed(true)}
-        onPressOut={() => setIsPressed(false)}
-        onPress={() => router.push({
-          pathname: item.screen,
-          params: item.params
-        })}
-      >
-        <View style={[
-          themedStyles.iconContainer,
-          { backgroundColor: theme.colors.primary + '15' }
-        ]}>
-          <MaterialCommunityIcons 
-            name={item.icon as any} 
-            size={28} 
-            color={theme.colors.primary}
-          />
-        </View>
-        <Text style={[themedStyles.cardTitle, { color: theme.colors.text }]}>{item.title}</Text>
-      </TouchableOpacity>
+    const renderApplicationItem = ({ item }: {item: Submission}) => (
+        <TouchableOpacity style={styles.adminItem}>
+            <Ionicons 
+                name={item.doc_type === 'Birth Certificate' ? 'person-add-outline' : 'id-card-outline'} 
+                size={24} 
+                color="#4b5563" 
+            />
+            <View style={styles.adminItemDetails}>
+                <Text style={styles.adminItemName}>{item.full_name}</Text>
+                <Text style={styles.adminItemType}>{item.doc_type}</Text>
+            </View>
+            <Text style={styles.adminItemDate}>{new Date(item.created_at).toLocaleDateString()}</Text>
+            <Ionicons name="chevron-forward" size={24} color="#9ca3af" />
+        </TouchableOpacity>
     );
-  };
+
+    return (
+        <View style={styles.adminContainer}>
+            <Text style={styles.adminTitle}>Pending Applications ({applications.length})</Text>
+            {loading ? (
+                <ActivityIndicator size="large" color="#2563eb" />
+            ) : (
+                <FlatList
+                    data={applications}
+                    renderItem={renderApplicationItem}
+                    keyExtractor={item => item.id}
+                    ListEmptyComponent={<Text style={styles.emptyText}>No pending applications.</Text>}
+                    refreshControl={<RefreshControl refreshing={loading} onRefresh={fetchData} />}
+                />
+            )}
+        </View>
+    );
+};
+
+// --- Mobile Dashboard Component ---
+const MobileDashboard = ({ profile }: {profile: Profile}) => {
+    const router = useRouter();
+    const renderDashboardCard = (
+      title: string, 
+      iconName: 'person-add-outline' | 'id-card-outline',
+      route: '/camera',
+      params: { type: 'birth' | 'id' }
+    ) => (
+        <TouchableOpacity 
+            style={styles.card} 
+            onPress={() => router.push({ pathname: route, params })}
+        >
+          <Ionicons name={iconName} size={40} color="#2563eb" />
+          <Text style={styles.cardText}>{title}</Text>
+        </TouchableOpacity>
+    );
+
+    return (
+        <View style={styles.mobileContainer}>
+            <Text style={styles.greeting}>Hello, {profile?.username || 'User'}</Text>
+            <View style={styles.cardContainer}>
+                {renderDashboardCard('Register Birth', 'person-add-outline', '/camera', { type: 'birth' })}
+                {renderDashboardCard('Request ID', 'id-card-outline', '/camera', { type: 'id' })}
+            </View>
+        </View>
+    );
+};
+
+// --- Main Component ---
+export default function HomeScreen() {
+  const { profile, isAdmin } = useAuth();
+
+  // Show the Admin Panel if the user is an admin AND they are on the web platform
+  const showAdminPanel = isAdmin && Platform.OS === 'web';
 
   return (
-    <View style={themedStyles.container}>
-      {/* Welcome Header */}
-      <View style={[themedStyles.headerContainer, { 
-        backgroundColor: theme.colors.card,
-      }]}>
-        <View style={themedStyles.headerContent}>
-          <View style={themedStyles.greetingContainer}>
-            <Text style={[themedStyles.welcomeText, { color: theme.colors.text }]}>
-              Welcome back,{' '}
-              <Text style={{ color: theme.colors.primary, fontWeight: '600' }}>
-                {formattedDisplayName || 'User'}
-              </Text>
-            </Text>
-            <Text style={[themedStyles.subtitle, { color: theme.colors.text + 'CC' }]}>
-              What would you like to do today?
-            </Text>
-          </View>
-        </View>
-      </View>
-      
-      <View style={themedStyles.grid}>
-        {menuItems.map((item, index) => (
-          <MenuItemButton key={index} item={item} />
-        ))}
-      </View>
-      
-      <View style={themedStyles.logoutButtonContainer}>
-        {(() => {
-          const LogoutButton = () => {
-            const [isPressed, setIsPressed] = useState(false);
-            
-            return (
-              <TouchableOpacity 
-                onPress={handleLogout}
-                onPressIn={() => setIsPressed(true)}
-                onPressOut={() => setIsPressed(false)}
-                style={[
-                  themedStyles.logoutButton,
-                  isPressed && themedStyles.logoutButtonActive
-                ]}
-                activeOpacity={0.9}
-              >
-                <MaterialCommunityIcons 
-                  name="logout" 
-                  size={20} 
-                  color="#fff" 
-                  style={themedStyles.logoutIcon} 
-                />
-                <Text style={themedStyles.logoutButtonText}>Sign Out</Text>
-              </TouchableOpacity>
-            );
-          };
-          
-          return <LogoutButton />;
-        })()}
-      </View>
-      
-      <Text style={themedStyles.footerText}>INCLUSIVE BIRTH & ID REGISTRATION</Text>
-    </View>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
+      <Stack.Screen options={{ title: 'Home', headerShown: false }} />
+      {showAdminPanel ? <AdminDashboard /> : <MobileDashboard profile={profile} />}
+    </SafeAreaView>
   );
-}
+};
+
+// --- STYLES ---
+const styles = StyleSheet.create({
+    // Mobile Styles
+    mobileContainer: { flex: 1, padding: 20 },
+    greeting: { fontSize: 28, fontWeight: 'bold', color: '#111', marginBottom: 20 },
+    cardContainer: { flexDirection: 'row', justifyContent: 'space-around' },
+    card: { width: '45%', aspectRatio: 1, backgroundColor: '#f0f4f8', borderRadius: 15, padding: 15, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#e5e7eb' },
+    cardText: { marginTop: 10, color: '#2563eb', fontWeight: '600', textAlign: 'center', fontSize: 16 },
+
+    // Admin (Web) Styles
+    adminContainer: { flex: 1, padding: Platform.OS === 'web' ? 40 : 20, backgroundColor: '#f8f9fa' },
+    adminTitle: { fontSize: 32, fontWeight: 'bold', marginBottom: 30, color: '#111827' },
+    adminItem: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', padding: 20, borderRadius: 10, marginBottom: 15, borderWidth: 1, borderColor: '#e5e7eb' },
+    adminItemDetails: { flex: 1, marginLeft: 15 },
+    adminItemName: { fontSize: 16, fontWeight: 'bold' },
+    adminItemType: { color: 'gray' },
+    adminItemDate: { color: 'gray', marginRight: 10 },
+    emptyText: { textAlign: 'center', marginTop: 50, color: 'gray' }
+});

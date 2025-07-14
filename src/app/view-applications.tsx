@@ -1,35 +1,39 @@
-import React, { useCallback, useState } from 'react';
-import { 
+import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
+import {
+  Alert,
+  FlatList,
+  RefreshControl,
+  StatusBar,
   StyleSheet,
   Text,
-  View,
-  useColorScheme,
-  SafeAreaView,
-  StatusBar,
-  FlatList,
   TouchableOpacity,
-  RefreshControl,
+  View,
+  useColorScheme
 } from 'react-native';
-import { router } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { useOffline } from '../context/OfflineContext';
-import type { OfflineItem } from '../context/OfflineContext';
-import { useTheme } from '../context/ThemeContext';
 import ModernAppBar from '../components/ModernAppBar';
+import { supabase } from '../config/client';
+import { useAuth } from '../context/AuthContext';
+import { useOffline } from '../context/OfflineContext';
+import { useTheme } from '../context/ThemeContext';
 
 
 interface SubmissionItem {
   id: string;
-  type: string;
+  type: 'Birth Certificate' | 'ID Card';
   name: string;
-  status: string;
+  status: 'Pending' | 'Approved' | 'Rejected' | 'Pending Sync';
+  date: string;
+  data: any;
 }
-
 
 const ViewApplications = () => {
   const theme = useTheme();
   const { queue } = useOffline();
-  const [refreshing, setRefreshing] = React.useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [submissions, setSubmissions] = useState<SubmissionItem[]>([]);
+  const { user } = useAuth();
   
   const styles = StyleSheet.create({
     container: {
@@ -46,10 +50,11 @@ const ViewApplications = () => {
     emptyText: {
       fontSize: 16,
       color: theme.colors.text + '80',
+      textAlign: 'center',
     },
     listContent: {
       padding: 15,
-      paddingTop: 60, // Add padding to account for the floating back button
+      paddingTop: 60,
     },
     itemContainer: {
       flexDirection: 'row',
@@ -57,6 +62,7 @@ const ViewApplications = () => {
       borderRadius: 10,
       padding: 15,
       marginBottom: 10,
+      backgroundColor: theme.colors.card,
       shadowColor: '#000',
       shadowOffset: { width: 0, height: 1 },
       shadowOpacity: 0.1,
@@ -70,6 +76,7 @@ const ViewApplications = () => {
       justifyContent: 'center',
       alignItems: 'center',
       marginRight: 15,
+      backgroundColor: theme.colors.primary + '20',
     },
     itemDetails: {
       flex: 1,
@@ -77,18 +84,20 @@ const ViewApplications = () => {
     itemType: {
       fontSize: 15,
       fontWeight: '600',
+      color: theme.colors.text,
     },
     itemName: {
       fontSize: 14,
       color: theme.colors.text + 'CC',
+      marginVertical: 2,
     },
-    itemStatus: {
-      paddingHorizontal: 10,
+    itemDate: {
+      fontSize: 12,
+      color: theme.colors.text + '99',
     },
     statusBadge: {
-      marginTop: 5,
       paddingHorizontal: 8,
-      paddingVertical: 2,
+      paddingVertical: 4,
       borderRadius: 10,
       borderWidth: 1,
       alignSelf: 'flex-start',
@@ -100,48 +109,105 @@ const ViewApplications = () => {
     },
   });
 
-  const onRefresh = React.useCallback(async () => {
+  const fetchSubmissions = useCallback(async () => {
+    if (!user) return;
+    
+    try {
+      // Fetch online submissions from Supabase
+      const { data: onlineSubs, error } = await supabase
+        .from('submissions')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      // Format online submissions
+      const formattedOnlineSubs: SubmissionItem[] = (onlineSubs || []).map((sub: any) => ({
+        id: sub.id,
+        type: sub.doc_type === 'birth' ? 'Birth Certificate' : 'ID Card',
+        name: sub.full_name,
+        status: sub.status || 'Pending',
+        date: new Date(sub.created_at).toLocaleDateString(),
+        data: sub
+      }));
+
+      // Format offline submissions
+      const formattedOfflineSubs: SubmissionItem[] = queue.map(item => ({
+        id: `offline-${item.timestamp}`,
+        type: (item as any).docType === 'birth' ? 'Birth Certificate' : 'ID Card',
+        name: item.formData.fullName || 'Unknown',
+        status: 'Pending Sync' as const,
+        date: new Date(item.timestamp).toLocaleDateString(),
+        data: item
+      }));
+
+      // Combine and sort by date (newest first)
+      const allSubmissions = [...formattedOnlineSubs, ...formattedOfflineSubs].sort(
+        (a, b) => new Date(b.data.created_at || b.data.timestamp).getTime() - 
+                  new Date(a.data.created_at || a.data.timestamp).getTime()
+      );
+
+      setSubmissions(allSubmissions);
+    } catch (error) {
+      console.error('Error fetching submissions:', error);
+      Alert.alert('Error', 'Failed to load submissions. Please try again.');
+    }
+  }, [user, queue]);
+
+  const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    // Simulate refresh since refreshSubmissions might not be available
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await fetchSubmissions();
     setRefreshing(false);
-  }, []);
-  
-  const pendingSubmissions: SubmissionItem[] = queue.map((item: { timestamp: number; formData: { fullName: string } }) => ({
-    id: item.timestamp.toString(),
-    type: 'ID Card', // Default type since docType isn't in OfflineItem
-    name: item.formData?.fullName || 'Unknown',
-    status: 'Pending Sync'
-  }));
+  }, [fetchSubmissions]);
 
-  const syncedSubmissions: SubmissionItem[] = []; // Empty since submittedDocs isn't in context
+  // Initial fetch
+  useEffect(() => {
+    fetchSubmissions();
+  }, [fetchSubmissions]);
 
 
-  const renderItem = ({ item }: { item: SubmissionItem }) => (
-    <View style={[styles.itemContainer, { backgroundColor: theme.colors.card }]}>
-      <View style={[styles.itemIcon, { backgroundColor: theme.colors.primary + '20' }]}>
-        <Ionicons
-          name={item.type === 'Birth Certificate' ? 'person-add-outline' : 'id-card-outline'}
-          size={24}
-          color={theme.colors.primary}
-        />
-      </View>
-      <View style={styles.itemDetails}>
-        <Text style={[styles.itemType, { color: theme.colors.text }]}>{item.type}</Text>
-        <Text style={[styles.itemName, { color: theme.colors.text }]}>{item.name}</Text>
-      </View>
-      <View style={[styles.statusBadge, item.status === 'Pending Sync' ? 
-        { backgroundColor: theme.colors.error + '20', borderColor: theme.colors.error } : 
-        { backgroundColor: theme.colors.success + '20', borderColor: theme.colors.success }]}
+  const renderItem = ({ item }: { item: SubmissionItem }) => {
+    const statusColors = {
+      'Pending': { bg: theme.colors.primary + '20', text: theme.colors.primary, border: theme.colors.primary },
+      'Approved': { bg: theme.colors.success + '20', text: theme.colors.success, border: theme.colors.success },
+      'Rejected': { bg: theme.colors.error + '20', text: theme.colors.error, border: theme.colors.error },
+      'Pending Sync': { bg: theme.colors.text + '20', text: theme.colors.text, border: theme.colors.text + '80' },
+    };
+
+    const status = statusColors[item.status] || statusColors.Pending;
+
+    return (
+      <TouchableOpacity 
+        style={styles.itemContainer}
+        onPress={() => {
+          // Navigate to details screen if needed
+          // router.push({ pathname: '/application-details', params: { id: item.id } });
+        }}
       >
-        <Text style={[styles.statusText, { 
-          color: item.status === 'Pending Sync' ? theme.colors.error : theme.colors.success 
+        <View style={[styles.itemIcon, { backgroundColor: status.bg }]}>
+          <Ionicons
+            name={item.type === 'Birth Certificate' ? 'person-add-outline' : 'id-card-outline'}
+            size={20}
+            color={status.text}
+          />
+        </View>
+        <View style={styles.itemDetails}>
+          <Text style={styles.itemType}>{item.type}</Text>
+          <Text style={styles.itemName}>{item.name}</Text>
+          <Text style={styles.itemDate}>{item.date}</Text>
+        </View>
+        <View style={[styles.statusBadge, { 
+          backgroundColor: status.bg,
+          borderColor: status.border
         }]}>
-          {item.status}
-        </Text>
-      </View>
-    </View>
-  );
+          <Text style={[styles.statusText, { color: status.text }]}>
+            {item.status}
+          </Text>
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <View style={styles.container}>
@@ -158,14 +224,16 @@ const ViewApplications = () => {
       />
 
       <FlatList
-        data={pendingSubmissions}
+        data={submissions}
         renderItem={renderItem}
         keyExtractor={item => item.id}
         contentContainerStyle={styles.listContent}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Ionicons name="document-text-outline" size={48} color={theme.colors.text + '80'} />
-            <Text style={styles.emptyText}>No pending applications</Text>
+            <Text style={styles.emptyText}>
+              {refreshing ? 'Loading...' : 'No applications found. Submit a new application to get started.'}
+            </Text>
           </View>
         }
         refreshControl={

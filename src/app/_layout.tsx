@@ -9,10 +9,27 @@ import { ActivityIndicator, View } from 'react-native';
 import React, { useEffect } from 'react';
 
 
-// This component applies the theme to the status bar
+// This component shows the system status bar with proper theming for edge-to-edge UI
 function ThemedStatusBar() {
-  const { isDark } = useTheme();
-  return <StatusBar style={isDark ? 'light' : 'dark'} />;
+  const { isDark, colors } = useTheme();
+  
+  return (
+    <View style={{
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      height: 0, // Takes no space but provides the background
+      backgroundColor: colors.background,
+      zIndex: 1000,
+    }}>
+      <StatusBar 
+        style={isDark ? 'light' : 'dark'} 
+        backgroundColor="transparent"
+        translucent={true}
+      />
+    </View>
+  );
 }
 
 const InitialLayout = () => {
@@ -47,13 +64,33 @@ const InitialLayout = () => {
   }
 
   return (
-    <Stack>
-      <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      <Stack.Screen name="map-modal" options={{ presentation: 'modal', headerShown: false }} />
-      <Stack.Screen name="camera" options={{ presentation: 'fullScreenModal', headerShown: false }} />
-      <Stack.Screen name="form" options={{ presentation: 'modal', headerShown: false }} />
-    </Stack>
+    <>
+      <ThemedStatusBar />
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { 
+            backgroundColor: 'transparent',
+            paddingTop: 0, // Remove any top padding that might affect status bar
+          },
+          animation: 'fade',
+        }}
+      >
+        {/* Main app screens */}
+        <Stack.Screen name="home" options={{ headerShown: false }} />
+        <Stack.Screen name="dashboard" options={{ headerShown: false }} />
+        <Stack.Screen name="view-applications" options={{ headerShown: false }} />
+        
+        {/* Auth screens */}
+        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+        
+        {/* Modal screens */}
+        <Stack.Screen name="map-modal" options={{ presentation: 'modal', headerShown: false }} />
+        <Stack.Screen name="camera" options={{ presentation: 'fullScreenModal', headerShown: false }} />
+        <Stack.Screen name="form" options={{ presentation: 'modal', headerShown: false }} />
+        <Stack.Screen name="document-form" options={{ presentation: 'modal', headerShown: false }} />
+      </Stack>
+    </>
   );
 };
 
@@ -63,8 +100,10 @@ export default function RootLayout() {
     <AuthProvider>
       <ThemeProvider>
         <OfflineProvider>
-          <ThemedStatusBar />
-          <InitialLayout />
+          <View style={{ flex: 1, backgroundColor: 'transparent' }}>
+            <ThemedStatusBar />
+            <InitialLayout />
+          </View>
         </OfflineProvider>
       </ThemeProvider>
     </AuthProvider>

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { auth } from '../config/firebase-init';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
-
+import { useTheme } from '../context/ThemeContext';
 import {
   StyleSheet,
   Text,
@@ -26,6 +26,7 @@ const SignUpScreen = ({ navigation }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const { colors, isDark } = useTheme();
 
   const handleSignUp = async () => {
     if (!username || !password || !confirmPassword) {
@@ -57,7 +58,7 @@ const SignUpScreen = ({ navigation }) => {
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={[styles.container, { backgroundColor: colors.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 40 : 0}
     >
@@ -66,27 +67,43 @@ const SignUpScreen = ({ navigation }) => {
           contentContainerStyle={styles.scrollContainer}
           keyboardShouldPersistTaps="handled"
         >
-          <StatusBar barStyle="dark-content" />
+          <StatusBar style={isDark ? 'light' : 'dark'} />
 
           <View style={styles.header}>
-            <View style={styles.logoContainer}>
-              <Ionicons name="person-add-outline" size={60} color="#fff" />
+            <View style={[styles.logoContainer, { backgroundColor: colors.primary }]}>
+              <Ionicons name="person-add-outline" size={60} color={colors.buttonText} />
             </View>
-            <Text style={styles.title}>Sign Up</Text>
+            <Text style={[styles.title, { color: colors.primary }]}>Sign Up</Text>
           </View>
 
           <View style={styles.form}>
             <TextInput
-              style={styles.input}
+              style={[
+                styles.input,
+                { 
+                  backgroundColor: colors.inputBackground,
+                  borderColor: colors.border,
+                  color: colors.inputText
+                }
+              ]}
               placeholder="Username"
               placeholderTextColor="#888"
               value={username}
               onChangeText={setUsername}
               autoCapitalize="none"
             />
-            <View style={styles.passwordContainer}>
+            <View style={[
+              styles.passwordContainer,
+              { 
+                backgroundColor: colors.inputBackground,
+                borderColor: colors.border
+              }
+            ]}>
               <TextInput
-                style={styles.inputPassword}
+                style={[
+                  styles.inputPassword,
+                  { color: colors.inputText }
+                ]}
                 placeholder="Password"
                 placeholderTextColor="#888"
                 value={password}
@@ -105,9 +122,18 @@ const SignUpScreen = ({ navigation }) => {
                 />
               </TouchableOpacity>
             </View>
-            <View style={styles.passwordContainer}>
+            <View style={[
+              styles.passwordContainer,
+              { 
+                backgroundColor: colors.inputBackground,
+                borderColor: colors.border
+              }
+            ]}>
               <TextInput
-                style={styles.inputPassword}
+                style={[
+                  styles.inputPassword,
+                  { color: colors.inputText }
+                ]}
                 placeholder="Confirm Password"
                 placeholderTextColor="#888"
                 value={confirmPassword}
@@ -127,11 +153,18 @@ const SignUpScreen = ({ navigation }) => {
               </TouchableOpacity>
             </View>
 
-            <TouchableOpacity style={styles.signUpButton} onPress={handleSignUp} disabled={isLoading}>
+            <TouchableOpacity 
+              style={[
+                styles.signUpButton, 
+                { backgroundColor: colors.primary }
+              ]} 
+              onPress={handleSignUp} 
+              disabled={isLoading}
+            >
               {isLoading ? (
-                <ActivityIndicator color="#fff" />
+                <ActivityIndicator color={colors.buttonText} />
               ) : (
-                <Text style={styles.signUpButtonText}>Create Account</Text>
+                <Text style={[styles.signUpButtonText, { color: colors.buttonText }]}>Create Account</Text>
               )}
             </TouchableOpacity>
 
@@ -139,8 +172,8 @@ const SignUpScreen = ({ navigation }) => {
               style={styles.loginLink}
               onPress={() => navigation.replace('Login')}
             >
-              <Text style={styles.loginText}>
-                Already have an account? <Text style={styles.loginLinkText}>Login here</Text>
+              <Text style={[styles.loginText, { color: colors.text }]}>
+                Already have an account? <Text style={[styles.loginLinkText, { color: colors.primary }]}>Login here</Text>
               </Text>
             </TouchableOpacity>
           </View>
@@ -153,7 +186,6 @@ const SignUpScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f0f4f8',
   },
   scrollContainer: {
     flexGrow: 1,
@@ -168,7 +200,6 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: '#2563eb',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 10,
@@ -178,29 +209,24 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#2563eb',
   },
   form: {
     width: '100%',
     paddingHorizontal: 20,
   },
   input: {
-    backgroundColor: '#fff',
     paddingHorizontal: 15,
     paddingVertical: 15,
     borderRadius: 10,
     fontSize: 16,
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: '#ddd',
   },
   passwordContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#ddd',
     marginBottom: 20,
   },
   inputPassword: {
@@ -214,7 +240,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   signUpButton: {
-    backgroundColor: '#2563eb',
     paddingVertical: 15,
     borderRadius: 10,
     alignItems: 'center',
@@ -222,7 +247,6 @@ const styles = StyleSheet.create({
     shadowColor: '#000',
   },
   signUpButtonText: {
-    color: '#fff',
     fontSize: 18,
     fontWeight: 'bold',
   },
@@ -232,10 +256,8 @@ const styles = StyleSheet.create({
   },
   loginText: {
     fontSize: 14,
-    color: '#555',
   },
   loginLinkText: {
-    color: '#2563eb',
     fontWeight: 'bold',
   },
 });

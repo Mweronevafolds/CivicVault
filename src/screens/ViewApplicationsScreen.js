@@ -11,10 +11,11 @@ import {
 } from 'react-native';
 import { OfflineContext } from '../context/OfflineContext';
 import { Ionicons } from '@expo/vector-icons';
-
+import { useTheme } from '../context/ThemeContext';
 
 const ViewApplicationsScreen = ({ navigation }) => {
   const { offlineQueue, submittedDocs } = useContext(OfflineContext);
+  const { colors, isDark } = useTheme();
   
   const pendingSubmissions = offlineQueue.map(item => ({
     id: item.timestamp.toString(),
@@ -29,24 +30,30 @@ const ViewApplicationsScreen = ({ navigation }) => {
     name: item.formData.fullName,
     status: 'Submitted'
   }));
-  // A helper function to render each item in our lists
+
   const renderItem = ({ item }) => (
-    <View style={styles.itemContainer}>
-      <View style={styles.itemIcon}>
+    <View style={[
+      styles.itemContainer,
+      { backgroundColor: colors.card }
+    ]}>
+      <View style={[
+        styles.itemIcon,
+        { backgroundColor: colors.primary + '20' }
+      ]}>
         <Ionicons
           name={item.type === 'Birth Certificate' ? 'person-add-outline' : 'id-card-outline'}
           size={24}
-          color="#2563eb"
+          color={colors.primary}
         />
       </View>
       <View style={styles.itemDetails}>
-        <Text style={styles.itemType}>{item.type}</Text>
-        <Text style={styles.itemName}>{item.name}</Text>
+        <Text style={[styles.itemType, { color: colors.text }]}>{item.type}</Text>
+        <Text style={[styles.itemName, { color: colors.text }]}>{item.name}</Text>
       </View>
       <View style={styles.itemStatus}>
         <Text style={[
-            styles.statusText,
-            { color: item.status === 'Submitted' ? 'green' : '#f59e0b' } // Different color for status
+          styles.statusText,
+          { color: item.status === 'Submitted' ? colors.success : colors.notification }
         ]}>
           {item.status}
         </Text>
@@ -55,43 +62,48 @@ const ViewApplicationsScreen = ({ navigation }) => {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" />
-      <View style={styles.header}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <StatusBar style={isDark ? 'light' : 'dark'} />
+      <View style={[
+        styles.header,
+        { 
+          borderBottomColor: colors.border,
+          backgroundColor: colors.card
+        }
+      ]}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} color="#111" />
+          <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>My Applications</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>My Applications</Text>
       </View>
 
-        <FlatList
-          data={[...pendingSubmissions, ...syncedSubmissions]}
-          renderItem={renderItem}
-          keyExtractor={(item) => item.id}
-          ListHeaderComponent={
-            <Text style={styles.listHeader}>
-              Showing all submissions. Items saved offline will be synced automatically.
-            </Text>
-          }
-          contentContainerStyle={styles.listContainer}
-          refreshControl={
-            <RefreshControl
-              refreshing={false}
-              onRefresh={() => {/* TODO: Add refresh logic */}}
-            />
-          }
-          ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>No applications found</Text>
-            </View>
-          }
-        />
-
+      <FlatList
+        data={[...pendingSubmissions, ...syncedSubmissions]}
+        renderItem={renderItem}
+        keyExtractor={(item) => item.id}
+        ListHeaderComponent={
+          <Text style={[styles.listHeader, { color: colors.text }]}>
+            Showing all submissions. Items saved offline will be synced automatically.
+          </Text>
+        }
+        contentContainerStyle={styles.listContainer}
+        refreshControl={
+          <RefreshControl
+            refreshing={false}
+            onRefresh={() => {/* TODO: Add refresh logic */}}
+            colors={[colors.primary]}
+          />
+        }
+        ListEmptyComponent={
+          <View style={styles.emptyContainer}>
+            <Text style={[styles.emptyText, { color: colors.text }]}>No applications found</Text>
+          </View>
+        }
+      />
     </SafeAreaView>
   );
 };
 
-// --- STYLES ---
 const styles = StyleSheet.create({
   emptyContainer: {
     flex: 1,
@@ -101,11 +113,9 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    color: '#666',
   },
   container: {
     flex: 1,
-    backgroundColor: '#fff',
   },
   header: {
     flexDirection: 'row',
@@ -113,7 +123,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
   },
   headerTitle: {
     fontSize: 20,
@@ -125,20 +134,20 @@ const styles = StyleSheet.create({
   },
   listHeader: {
     fontSize: 14,
-    color: '#666',
     marginBottom: 20,
     textAlign: 'center',
   },
   itemContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f0f4f8',
     borderRadius: 10,
     padding: 15,
     marginBottom: 15,
   },
   itemIcon: {
     marginRight: 15,
+    padding: 10,
+    borderRadius: 8,
   },
   itemDetails: {
     flex: 1,
@@ -146,11 +155,9 @@ const styles = StyleSheet.create({
   itemType: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#333',
   },
   itemName: {
     fontSize: 14,
-    color: '#666',
   },
   itemStatus: {
     paddingHorizontal: 10,

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { auth } from '../config/firebase-init';
 import { signInWithEmailAndPassword } from 'firebase/auth';
-
+import { useTheme } from '../context/ThemeContext';
 import {
   StyleSheet,
   Text,
@@ -21,7 +21,6 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// NEW: A constant for our session key
 const SESSION_KEY = '@CivicVault:userSession';
 
 const LoginScreen = ({ navigation }) => {
@@ -29,16 +28,16 @@ const LoginScreen = ({ navigation }) => {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const { isOnline } = useOffline(); // NEW: Get network status from our context
+  const { isOnline } = useOffline();
+  const { colors, isDark } = useTheme();
 
-  // NEW: This effect runs when the screen loads to check for an offline session
   useEffect(() => {
     const checkOfflineSession = async () => {
       try {
         const savedSession = await AsyncStorage.getItem(SESSION_KEY);
         if (savedSession) {
           console.log('Found offline session, logging in automatically.');
-          navigation.replace('screens/HomeScreen', { userName: username }); // Go directly to HomeScreen.js with username
+          navigation.replace('screens/HomeScreen', { userName: username });
         }
       } catch (e) {
         console.error('Failed to load offline session', e);
@@ -46,7 +45,7 @@ const LoginScreen = ({ navigation }) => {
     };
 
     checkOfflineSession();
-  }, [isOnline]); // Reruns if the network status changes
+  }, [isOnline]);
 
   const handleLogin = async () => {
     setIsLoading(true);
@@ -60,7 +59,6 @@ const LoginScreen = ({ navigation }) => {
       const userCredential = await signInWithEmailAndPassword(auth, username, password);
       console.log('User signed in:', userCredential.user.email);
 
-      // Store user session locally
       await AsyncStorage.setItem(SESSION_KEY, JSON.stringify({
         email: userCredential.user.email,
         uid: userCredential.user.uid,
@@ -82,7 +80,7 @@ const LoginScreen = ({ navigation }) => {
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={[styles.container, { backgroundColor: colors.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 40 : 0}
     >
@@ -91,37 +89,52 @@ const LoginScreen = ({ navigation }) => {
           contentContainerStyle={styles.scrollContainer}
           keyboardShouldPersistTaps="handled"
         >
-          <StatusBar barStyle="dark-content" />
+          <StatusBar style={isDark ? 'light' : 'dark'} />
 
-          {/* NEW: Visual indicator for network status */}
           {!isOnline && (
-            <View style={styles.offlineBanner}>
-              <Text style={styles.offlineBannerText}>You are currently offline</Text>
+            <View style={[styles.offlineBanner, { backgroundColor: colors.notification }]}>
+              <Text style={[styles.offlineBannerText, { color: colors.text }]}>
+                You are currently offline
+              </Text>
             </View>
           )}
 
           <View style={styles.header}>
-            <View style={styles.logoContainer}>
-              <Ionicons name="person-circle-outline" size={60} color="#fff" />
+            <View style={[styles.logoContainer, { backgroundColor: colors.primary }]}>
+              <Ionicons name="person-circle-outline" size={60} color={colors.buttonText} />
             </View>
-            <Text style={styles.title}>Login</Text>
+            <Text style={[styles.title, { color: colors.primary }]}>Login</Text>
           </View>
 
           <View style={styles.form}>
             <TextInput
-              style={styles.input}
+              style={[
+                styles.input,
+                { 
+                  backgroundColor: colors.inputBackground,
+                  borderColor: colors.border,
+                  color: colors.inputText
+                }
+              ]}
               placeholder="Username (demo)"
-
               placeholderTextColor="#888"
               value={username}
               onChangeText={setUsername}
               autoCapitalize="none"
             />
-            <View style={styles.passwordContainer}>
+            <View style={[
+              styles.passwordContainer,
+              { 
+                backgroundColor: colors.inputBackground,
+                borderColor: colors.border
+              }
+            ]}>
               <TextInput
-                style={styles.inputPassword}
-              placeholder="Password (demo123)"
-
+                style={[
+                  styles.inputPassword,
+                  { color: colors.inputText }
+                ]}
+                placeholder="Password (demo123)"
                 placeholderTextColor="#888"
                 value={password}
                 onChangeText={setPassword}
@@ -140,50 +153,51 @@ const LoginScreen = ({ navigation }) => {
               </TouchableOpacity>
             </View>
 
-            <TouchableOpacity style={styles.loginButton} onPress={handleLogin} disabled={isLoading}>
+            <TouchableOpacity 
+              style={[styles.loginButton, { backgroundColor: colors.primary }]} 
+              onPress={handleLogin} 
+              disabled={isLoading}
+            >
               {isLoading ? (
-                <ActivityIndicator color="#fff" />
+                <ActivityIndicator color={colors.buttonText} />
               ) : (
-                <Text style={styles.loginButtonText}>Login</Text>
+                <Text style={[styles.loginButtonText, { color: colors.buttonText }]}>Login</Text>
               )}
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.registerLink} onPress={() => navigation.navigate('SignUp')}>
-              <Text style={styles.registerText}>
-                New user? <Text style={styles.registerLinkText}>Register here</Text>
+              <Text style={[styles.registerText, { color: colors.text }]}>
+                New user? <Text style={[styles.registerLinkText, { color: colors.primary }]}>Register here</Text>
               </Text>
             </TouchableOpacity>
           </View>
 
-          <Text style={styles.footerText}>INCLUSIVE BIRTH & ID REGISTRATION</Text>
+          <Text style={[styles.footerText, { color: colors.text }]}>
+            INCLUSIVE BIRTH & ID REGISTRATION
+          </Text>
         </ScrollView>
       </TouchableWithoutFeedback>
     </KeyboardAvoidingView>
   );
 };
 
-// --- STYLES ---
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f0f4f8',
   },
   scrollContainer: {
     flexGrow: 1,
     justifyContent: 'center',
   },
-  // NEW: Styles for the offline banner
   offlineBanner: {
     position: 'absolute',
     top: 0,
     width: '100%',
-    backgroundColor: '#ffc107',
     padding: 8,
     alignItems: 'center',
     zIndex: 1,
   },
   offlineBannerText: {
-    color: '#000',
     fontWeight: 'bold',
   },
   header: {
@@ -195,7 +209,6 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: '#2563eb',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 10,
@@ -205,29 +218,24 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#2563eb',
   },
   form: {
     width: '100%',
     paddingHorizontal: 20,
   },
   input: {
-    backgroundColor: '#fff',
     paddingHorizontal: 15,
     paddingVertical: 15,
     borderRadius: 10,
     fontSize: 16,
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: '#ddd',
   },
   passwordContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#ddd',
     marginBottom: 25,
   },
   inputPassword: {
@@ -241,7 +249,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   loginButton: {
-    backgroundColor: '#2563eb',
     paddingVertical: 15,
     borderRadius: 10,
     alignItems: 'center',
@@ -249,7 +256,6 @@ const styles = StyleSheet.create({
     shadowColor: '#000',
   },
   loginButtonText: {
-    color: '#fff',
     fontSize: 18,
     fontWeight: 'bold',
   },
@@ -259,17 +265,14 @@ const styles = StyleSheet.create({
   },
   registerText: {
     fontSize: 14,
-    color: '#555',
   },
   registerLinkText: {
-    color: '#2563eb',
     fontWeight: 'bold',
   },
   footerText: {
     position: 'absolute',
     bottom: 30,
     alignSelf: 'center',
-    color: '#888',
     fontSize: 12,
   },
 });

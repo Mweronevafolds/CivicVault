@@ -4,7 +4,7 @@ import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { OfflineContext } from '../context/OfflineContext';
 import { ThemedView } from '../components/ThemedView';
-import { Colors } from '../constants/Colors';
+import { useTheme } from '../context/ThemeContext';
 
 type DocumentType = 'birth' | 'id';
 
@@ -17,6 +17,7 @@ export default function DocumentForm() {
     parentNames: ''
   });
   const [isLoading, setIsLoading] = useState(false);
+  const { colors } = useTheme();
 
   const offlineContext = useContext(OfflineContext);
   if (!offlineContext) throw new Error('OfflineContext not found');
@@ -79,18 +80,27 @@ export default function DocumentForm() {
     return true;
   };
 
-
   return (
     <ThemedView style={styles.container}>
       <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-        <Ionicons name="arrow-back" size={24} color={Colors.light.primary} />
+        <Ionicons name="arrow-back" size={24} color={colors.primary} />
       </TouchableOpacity>
 
-      <Text style={styles.title}>Enter {docType === 'birth' ? 'Birth' : 'ID'} Details</Text>
+      <Text style={[styles.title, { color: colors.text }]}>
+        Enter {docType === 'birth' ? 'Birth' : 'ID'} Details
+      </Text>
 
       <View style={styles.inputContainer}>
         <TextInput
-          style={[styles.input, validationErrors.fullName && styles.inputError]}
+          style={[
+            styles.input, 
+            validationErrors.fullName && styles.inputError,
+            { 
+              borderColor: colors.border,
+              backgroundColor: colors.inputBackground,
+              color: colors.inputText
+            }
+          ]}
           placeholder="Full Name *"
           placeholderTextColor="#888"
           value={formData.fullName}
@@ -102,15 +112,23 @@ export default function DocumentForm() {
           }}
         />
         {validationErrors.fullName && (
-          <Text style={styles.errorText}>{validationErrors.fullName}</Text>
+          <Text style={[styles.errorText, { color: colors.error }]}>
+            {validationErrors.fullName}
+          </Text>
         )}
       </View>
 
-
-
       <View style={styles.inputContainer}>
         <TextInput
-          style={[styles.input, validationErrors.dateOfBirth && styles.inputError]}
+          style={[
+            styles.input, 
+            validationErrors.dateOfBirth && styles.inputError,
+            { 
+              borderColor: colors.border,
+              backgroundColor: colors.inputBackground,
+              color: colors.inputText
+            }
+          ]}
           placeholder="Date of Birth (YYYY-MM-DD) *"
           placeholderTextColor="#888"
           value={formData.dateOfBirth}
@@ -122,17 +140,25 @@ export default function DocumentForm() {
           }}
         />
         {validationErrors.dateOfBirth && (
-          <Text style={styles.errorText}>{validationErrors.dateOfBirth}</Text>
+          <Text style={[styles.errorText, { color: colors.error }]}>
+            {validationErrors.dateOfBirth}
+          </Text>
         )}
       </View>
-
-
 
       {docType === 'birth' && (
         <>
           <View style={styles.inputContainer}>
             <TextInput
-              style={[styles.input, validationErrors.placeOfBirth && styles.inputError]}
+              style={[
+                styles.input, 
+                validationErrors.placeOfBirth && styles.inputError,
+                { 
+                  borderColor: colors.border,
+                  backgroundColor: colors.inputBackground,
+                  color: colors.inputText
+                }
+              ]}
               placeholder="Place of Birth *"
               placeholderTextColor="#888"
               value={formData.placeOfBirth}
@@ -144,31 +170,38 @@ export default function DocumentForm() {
               }}
             />
             {validationErrors.placeOfBirth && (
-              <Text style={styles.errorText}>{validationErrors.placeOfBirth}</Text>
+              <Text style={[styles.errorText, { color: colors.error }]}>
+                {validationErrors.placeOfBirth}
+              </Text>
             )}
           </View>
 
-
           <TextInput
-            style={styles.input}
+            style={[
+              styles.input,
+              { 
+                borderColor: colors.border,
+                backgroundColor: colors.inputBackground,
+                color: colors.inputText
+              }
+            ]}
             placeholder="Parent Names"
             placeholderTextColor="#888"
             value={formData.parentNames}
             onChangeText={text => setFormData({...formData, parentNames: text})}
           />
-
         </>
       )}
 
       <TouchableOpacity
-        style={styles.submitButton}
+        style={[styles.submitButton, { backgroundColor: colors.primary }]}
         onPress={handleSubmit}
         disabled={isLoading}
       >
         {isLoading ? (
-          <ActivityIndicator color="#fff" />
+          <ActivityIndicator color={colors.buttonText} />
         ) : (
-          <Text style={styles.submitButtonText}>
+          <Text style={[styles.submitButtonText, { color: colors.buttonText }]}>
             {isOnline ? 'Submit' : 'Save Offline'}
           </Text>
         )}
@@ -185,12 +218,10 @@ const styles = StyleSheet.create({
     borderColor: 'red',
   },
   errorText: {
-    color: 'red',
     fontSize: 12,
     marginTop: 4,
     marginLeft: 4,
   },
-
   container: {
     flex: 1,
     padding: 20,
@@ -202,29 +233,22 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 20,
-    color: Colors.light.text,
   },
   input: {
     width: '100%',
     borderWidth: 1,
-    borderColor: Colors.light.icon,
-
     padding: 15,
     borderRadius: 8,
     marginBottom: 15,
-    backgroundColor: Colors.light.background,
-    color: Colors.light.text,
   },
   submitButton: {
     width: '100%',
-    backgroundColor: Colors.light.primary,
     padding: 15,
     borderRadius: 8,
     alignItems: 'center',
     marginTop: 20,
   },
   submitButtonText: {
-    color: 'white',
     fontWeight: 'bold',
     fontSize: 16,
   },

@@ -12,17 +12,30 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import MapView, { Marker } from 'react-native-maps';
 import { Stack, useRouter } from 'expo-router';
-import { getUserSubmissions } from '../api/ApiService';
-import { useTheme } from '../context/ThemeContext';
+import { getUserSubmissions } from '../../api/ApiService';
+import { Colors } from '../../constants/Colors';
+import { useColorScheme } from '../../hooks/useColorScheme';
 
 const DashboardScreen = () => {
   const router = useRouter();
-  const { colors, isDark } = useTheme();
+  const colorScheme = useColorScheme() ?? 'light';
+  const colors = Colors[colorScheme];
   
-  const [submissions, setSubmissions] = useState([]);
+  type Submission = {
+    id: string;
+    doc_type: string;
+    status: 'approved' | 'pending';
+    created_at: string;
+    latitude?: number;
+    longitude?: number;
+  };
+
+  const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [metrics, setMetrics] = useState({ total: 0, approved: 0, pending: 0 });
+
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
+
 
   const fetchData = async () => {
     setLoading(true);
@@ -36,8 +49,9 @@ const DashboardScreen = () => {
       const pending = userSubmissions.filter(s => s.status === 'pending').length;
       setMetrics({ total, approved, pending });
 
-    } catch (e) {
-      setError(e.message);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Unknown error occurred');
+
     } finally {
       setLoading(false);
     }
@@ -47,7 +61,13 @@ const DashboardScreen = () => {
     fetchData();
   }, []);
 
-  const renderMetricCard = (title, value, iconName, color) => (
+  const renderMetricCard = (
+    title: string, 
+    value: number, 
+    iconName: string, 
+    color: string
+  ) => (
+
     <View style={[
       styles.metricCard,
       { 
@@ -55,15 +75,17 @@ const DashboardScreen = () => {
         borderColor: colors.border
       }
     ]}>
-      <Ionicons name={iconName} size={32} color={color} />
+      <Ionicons name={iconName as any} size={32} color={color} />
+
       <Text style={[styles.metricValue, { color: colors.text }]}>{value}</Text>
       <Text style={[styles.metricTitle, { color: colors.text }]}>{title}</Text>
     </View>
   );
 
-  const renderActivityItem = ({ item }) => {
+  const renderActivityItem = ({ item }: { item: Submission }) => {
+
     const isApproved = item.status === 'approved';
-    const statusColor = isApproved ? colors.success : colors.notification;
+    const statusColor = isApproved ? '#10b981' : '#f59e0b'; // Success and warning colors
     return (
         <View style={[
           styles.activityItem,
@@ -100,7 +122,7 @@ const DashboardScreen = () => {
   if (error) {
     return (
         <SafeAreaView style={styles.center}>
-            <Text style={{ color: colors.error }}>Error: {error}</Text>
+            <Text style={{ color: '#ef4444' }}>Error: {error}</Text>
             <TouchableOpacity onPress={fetchData}>
               <Text style={{color: colors.primary}}>Try Again</Text>
             </TouchableOpacity>
@@ -129,16 +151,29 @@ const DashboardScreen = () => {
       >
         <View style={styles.metricsGrid}>
           {renderMetricCard('My Submissions', metrics.total, 'document-text-outline', colors.primary)}
-          {renderMetricCard('Approved', metrics.approved, 'shield-checkmark-outline', colors.success)}
-          {renderMetricCard('Pending', metrics.pending, 'hourglass-outline', colors.notification)}
+          {renderMetricCard('Approved', metrics.approved, 'shield-checkmark-outline', '#10b981')}
+          {renderMetricCard('Pending', metrics.pending, 'hourglass-outline', '#f59e0b')}
           {renderMetricCard('Offline Queue', 0, 'cloud-offline-outline', colors.text)}
         </View>
 
         <Text style={[styles.sectionTitle, { color: colors.text }]}>My Submission Locations</Text>
         <TouchableOpacity style={styles.mapContainer} onPress={() => router.push('/map-modal')}>
           <MapView style={styles.map} initialRegion={{ latitude: -1.29, longitude: 36.82, latitudeDelta: 0.09, longitudeDelta: 0.04 }} scrollEnabled={false} zoomEnabled={false}>
-            {submissions.filter(s => s.latitude && s.longitude).map(marker => (
-                <Marker key={marker.id} coordinate={{ latitude: marker.latitude, longitude: marker.longitude }} title={marker.doc_type} />
+            {submissions
+              .filter((s): s is Submission & { latitude: number; longitude: number } => 
+                !!s.latitude && !!s.longitude
+              )
+              .map(marker => (
+
+                <Marker 
+                  key={marker.id} 
+                  coordinate={{ 
+                    latitude: marker.latitude, 
+                    longitude: marker.longitude 
+                  }} 
+                  title={marker.doc_type} 
+                />
+
             ))}
           </MapView>
           <View style={styles.mapOverlay}>

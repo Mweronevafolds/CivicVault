@@ -1,19 +1,7 @@
-import { Stack, useRouter, useSegments } from 'expo-router';
-import 'react-native-reanimated';
-import { OfflineProvider } from '../context/OfflineContext';
-import { ThemeProvider } from '../context/ThemeContext';
-import { StatusBar } from 'expo-status-bar';
-import { useTheme } from '../context/ThemeContext';
+import React, { useEffect } from 'react';
+import { Slot, useRouter, useSegments } from 'expo-router';
 import { AuthProvider, useAuth } from '../context/AuthContext';
 import { ActivityIndicator, View } from 'react-native';
-import React, { useEffect } from 'react';
-
-
-// This component applies the theme to the status bar
-function ThemedStatusBar() {
-  const { isDark } = useTheme();
-  return <StatusBar style={isDark ? 'light' : 'dark'} />;
-}
 
 const InitialLayout = () => {
   const { user, loading } = useAuth();
@@ -21,52 +9,40 @@ const InitialLayout = () => {
   const router = useRouter();
 
   useEffect(() => {
-    // Don't do anything until the auth state is loaded
+    // If we're still loading the user session, don't do anything yet.
     if (loading) return;
 
     const inAuthGroup = segments[0] === '(auth)';
 
-    if (user && !inAuthGroup) {
-      // User is signed in and not in the auth group.
-      // Redirect them to the main app (home screen).
+    // If the user is signed in and is on a page in the (auth) group,
+    // redirect them to the main app's home screen.
+    if (user && inAuthGroup) {
       router.replace('/home');
-    } else if (!user) {
-      // User is not signed in.
-      // Redirect them to the login screen.
+    } 
+    // If the user is not signed in and they are trying to access a page
+    // inside the main app, redirect them to the login screen.
+    else if (!user && !inAuthGroup) {
       router.replace('/');
     }
-  }, [user, loading]);
+  }, [user, loading, segments]);
 
+  // While checking for the user, show a loading spinner.
   if (loading) {
-    // Show a loading spinner while we check for a session
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" />
+        <ActivityIndicator size="large" color="#2563eb" />
       </View>
     );
   }
 
-  return (
-    <Stack>
-      <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      <Stack.Screen name="map-modal" options={{ presentation: 'modal', headerShown: false }} />
-      <Stack.Screen name="camera" options={{ presentation: 'fullScreenModal', headerShown: false }} />
-      <Stack.Screen name="form" options={{ presentation: 'modal', headerShown: false }} />
-    </Stack>
-  );
+  // Once loading is complete, show the screen that Expo Router has matched.
+  return <Slot />;
 };
 
 export default function RootLayout() {
   return (
-    // Wrap providers in correct hierarchy
     <AuthProvider>
-      <ThemeProvider>
-        <OfflineProvider>
-          <ThemedStatusBar />
-          <InitialLayout />
-        </OfflineProvider>
-      </ThemeProvider>
+      <InitialLayout />
     </AuthProvider>
   );
 }

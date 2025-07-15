@@ -144,3 +144,25 @@ export const getPendingSubmissionsForAdmin = async () => {
     throw new Error('Could not fetch pending submissions.');
   }
 };
+
+/**
+ * Fetches ALL submissions for an admin.
+ * This is used for the dashboard total count, which should not decrease.
+ * This will only work if the logged-in user has the 'admin' role,
+ * as defined by our Supabase RLS policies.
+ * @returns {Promise<Array>} A list of all submissions.
+ */
+export const getAllSubmissionsForAdmin = async () => {
+  try {
+    const { data, error } = await supabase
+      .from('submissions')
+      .select('*'); // Get all columns
+
+    if (error) throw error;
+    
+    return data;
+  } catch (error) {
+    console.error('Error fetching all submissions for admin:', error);
+    throw new Error('Could not fetch all submissions.');
+  }
+};

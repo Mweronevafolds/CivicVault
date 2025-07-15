@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View, ViewStyle } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
 
 interface ModernAppBarProps {
@@ -21,18 +22,21 @@ const ModernAppBar: React.FC<ModernAppBarProps> = ({
   elevation = 3,
 }) => {
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
 
   return (
-    <View 
+    <View
       style={[
         styles.container,
-        { 
+        {
           backgroundColor: colors.card,
           shadowColor: '#000',
           shadowOffset: { width: 0, height: elevation / 3 },
           shadowOpacity: 0.15,
           shadowRadius: elevation,
           elevation,
+          paddingTop: insets.top + 10, // Add safe area inset to padding
+          height: 60 + insets.top, // Adjust height dynamically
         },
         style,
       ]}
@@ -76,8 +80,7 @@ const ModernAppBar: React.FC<ModernAppBarProps> = ({
 const styles = StyleSheet.create({
   container: {
     width: '100%',
-    paddingTop: 40, // For status bar
-    paddingBottom: 12,
+    paddingBottom: 10, // Reduced for a more compact look
     zIndex: 100,
   },
   content: {

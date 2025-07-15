@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useState } from 'react';
+import { ActivityIndicator, Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { supabase } from '../config/client';
 import { useTheme } from '../context/ThemeContext';
 
@@ -25,6 +25,21 @@ const AuthScreen = () => {
       
       if (error) {
         throw error;
+      }
+      
+      // Get the user's session
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        // Fetch the user's profile from Supabase
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', session.user.id)
+          .single();
+
+        if (profileError) {
+          console.error('Error fetching profile:', profileError);
+        }
       }
       
       console.log('User signed in:', email);

@@ -1,17 +1,16 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Platform } from 'react-native';
 import {
     ActivityIndicator,
-    FlatList,
-    RefreshControl,
-    SafeAreaView, 
+    FlatList, Platform, RefreshControl,
+    SafeAreaView,
     StyleSheet,
     Text,
     TouchableOpacity,
     View
 } from 'react-native';
+import Toast from 'react-native-toast-message';
 import { getPendingSubmissionsForAdmin } from '../../src/api/ApiService';
 import { supabase } from '../../src/config/client';
 import { useAuth } from '../../src/context/AuthContext';
@@ -43,67 +42,9 @@ type Profile = {
   username?: string;
 };
 
-// --- Admin Panel Component (for Web) ---
-const AdminDashboard = () => {
-    const [applications, setApplications] = useState<Submission[]>([]);
-    const [loading, setLoading] = useState(true);
-
-    const fetchData = async () => {
-        setLoading(true);
-        try {
-            const pendingApps = await getPendingSubmissionsForAdmin();
-            setApplications(pendingApps || []);
-        } catch (error: unknown) {
-            if (error instanceof Error) {
-                console.error(error.message);
-            } else {
-                console.error('Unknown error occurred');
-            }
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        fetchData();
-    }, []);
-
-    const renderApplicationItem = ({ item }: {item: Submission}) => (
-        <TouchableOpacity style={styles.adminItem}>
-            <Ionicons 
-                name={item.doc_type === 'Birth Certificate' ? 'person-add-outline' : 'id-card-outline'} 
-                size={24} 
-                color="#4b5563" 
-            />
-            <View style={styles.adminItemDetails}>
-                <Text style={styles.adminItemName}>{item.full_name}</Text>
-                <Text style={styles.adminItemType}>{item.doc_type}</Text>
-            </View>
-            <Text style={styles.adminItemDate}>{new Date(item.created_at).toLocaleDateString()}</Text>
-            <Ionicons name="chevron-forward" size={24} color="#9ca3af" />
-        </TouchableOpacity>
-    );
-
-    return (
-        <View style={styles.adminContainer}>
-            <Text style={styles.adminTitle}>Pending Applications ({applications.length})</Text>
-            {loading ? (
-                <ActivityIndicator size="large" color="#2563eb" />
-            ) : (
-                <FlatList
-                    data={applications}
-                    renderItem={renderApplicationItem}
-                    keyExtractor={item => item.id}
-                    ListEmptyComponent={<Text style={styles.emptyText}>No pending applications.</Text>}
-                    refreshControl={<RefreshControl refreshing={loading} onRefresh={fetchData} />}
-                />
-            )}
-        </View>
-    );
-};
 
 // --- Mobile Dashboard Component ---
-const MobileDashboard = ({ profile }: {profile: Profile}) => {
+const MobileDashboard = ({ onNavigate, isAdmin, profile }: { onNavigate: (screen: AppRoute, params?: any) => void, isAdmin: boolean, profile: Profile }) => {
     const router = useRouter();
     const { colors } = useTheme();
 
@@ -124,7 +65,7 @@ const MobileDashboard = ({ profile }: {profile: Profile}) => {
     const renderDashboardCard = (title: string, icon: string, route: AppRoute, params?: any) => (
         <TouchableOpacity 
             style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]} 
-            onPress={() => router.push({ pathname: route, params })}
+            onPress={() => onNavigate(route, params)}
         >
             <View style={[styles.iconContainer, { backgroundColor: `${colors.primary}20` }]}>
                 <Ionicons name={icon as any} size={32} color={colors.primary} />
@@ -136,7 +77,7 @@ const MobileDashboard = ({ profile }: {profile: Profile}) => {
     return (
         <View style={[styles.mobileContainer, { backgroundColor: colors.background }]}>
             <View style={styles.headerContainer}>
-                <Text style={[styles.greeting, { color: colors.text }]}>Hello, {profile?.username || 'User'}</Text>
+                <View style={{ flex: 1 }} />
                 <TouchableOpacity 
                     onPress={handleSignOut} 
                     style={[styles.signOutButton, { backgroundColor: colors.card }]}
@@ -151,6 +92,7 @@ const MobileDashboard = ({ profile }: {profile: Profile}) => {
             </View>
             <View style={styles.cardContainer}>
                 {renderDashboardCard('View Applications', 'document-text-outline', '/view-applications' as AppRoute)}
+                {isAdmin && renderDashboardCard('Dashboard', 'apps-outline', '/dashboard' as AppRoute)}
             </View>
         </View>
     );
@@ -158,23 +100,28 @@ const MobileDashboard = ({ profile }: {profile: Profile}) => {
 
 // --- Main Component ---
 export default function HomeScreen() {
-  const { profile, isAdmin } = useAuth();
+  const { profile, isAdmin, loading } = useAuth();
   const { colors } = useTheme();
+  const router = useRouter(); // Correctly call the hook here
 
-  // Show the Admin Panel if the user is an admin AND they are on the web platform
-  const showAdminPanel = isAdmin && Platform.OS === 'web';
+  useEffect(() => {
+    if (!loading && profile) {
+      Toast.show({
+        type: 'success',
+        text1: `Welcome, ${profile.username || 'User'}!`,
+        text2: `You are logged in as an ${isAdmin ? 'Admin' : 'User'}.`
+      });
+    }
+  }, [profile, loading, isAdmin]);
 
-  if (isAdmin && Platform.OS === 'web') {
-    return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
-        <AdminDashboard />
-      </SafeAreaView>
-    );
-  }
+  // This function now uses the router instance from the hook
+  const handleNavigation = (screen: AppRoute, params?: any) => {
+    router.push({ pathname: screen, params });
+  };
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
-      <MobileDashboard profile={profile} />
+      <MobileDashboard onNavigate={handleNavigation} isAdmin={isAdmin} profile={profile} />
     </SafeAreaView>
   );
 };
@@ -243,30 +190,5 @@ const styles = StyleSheet.create({
         fontWeight: '600', 
         textAlign: 'center', 
         fontSize: 15,
-    },
-
-    // Admin (Web) Styles
-    adminContainer: { 
-        flex: 1, 
-        padding: 20,
-    },
-    adminTitle: { 
-        fontSize: 28, 
-        fontWeight: 'bold', 
-        marginBottom: 20,
-        textAlign: 'center',
-    },
-    adminItem: { 
-        flexDirection: 'row', 
-        alignItems: 'center', 
-        padding: 15, 
-        borderRadius: 10, 
-        marginBottom: 12, 
-        borderWidth: 1,
-    },
-    adminItemDetails: { flex: 1, marginLeft: 15 },
-    adminItemName: { fontSize: 16, fontWeight: 'bold' },
-    adminItemType: { color: 'gray' },
-    adminItemDate: { color: 'gray', marginRight: 10 },
-    emptyText: { textAlign: 'center', marginTop: 50, color: 'gray' }
+    }
 });

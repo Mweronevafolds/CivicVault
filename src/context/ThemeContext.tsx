@@ -8,6 +8,7 @@ export type ThemeColors = {
   background: string;
   card: string;
   text: string;
+  textSecondary: string;
   border: string;
   notification: string;
   inputBackground: string;
@@ -15,6 +16,9 @@ export type ThemeColors = {
   buttonText: string;
   error: string;
   success: string;
+  warning: string;
+  successSoft: string;
+  warningSoft: string;
 };
 
 type ThemeContextType = {
@@ -25,24 +29,29 @@ type ThemeContextType = {
 };
 
 const lightColors: ThemeColors = {
-  primary: '#007AFF',
-  background: '#ffffff',
-  card: '#f8f8f8',
-  text: '#1a1a1a',
-  border: '#e0e0e0',
+  primary: '#3b82f6',
+  background: '#f1f5f9',
+  card: '#ffffff',
+  text: '#1f2937',
+  textSecondary: '#6b7280',
+  border: '#e5e7eb',
   notification: '#ff3b30',
   inputBackground: '#f5f5f5',
   inputText: '#1a1a1a',
   buttonText: '#ffffff',
   error: '#ff3b30',
-  success: '#34c759',
+  success: '#22c55e',
+  warning: '#f59e0b',
+  successSoft: '#dcfce7',
+  warningSoft: '#fef9c3',
 };
 
 const darkColors: ThemeColors = {
   primary: '#0a84ff',
   background: '#121212',
   card: '#1e1e1e',
-  text: '#ffffff',
+  text: '#f8fafc',
+  textSecondary: '#888888',
   border: '#2c2c2e',
   notification: '#ff453a',
   inputBackground: '#2c2c2e',
@@ -50,6 +59,9 @@ const darkColors: ThemeColors = {
   buttonText: '#ffffff',
   error: '#ff453a',
   success: '#30d158',
+  warning: '#facc15',
+  successSoft: '#1c4532',
+  warningSoft: '#422006',
 };
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);

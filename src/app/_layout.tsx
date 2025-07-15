@@ -1,13 +1,13 @@
 import { Stack, useRouter, useSegments } from 'expo-router';
-import 'react-native-reanimated';
-import { OfflineProvider } from '../context/OfflineContext';
-import { ThemeProvider } from '../context/ThemeContext';
 import { StatusBar } from 'expo-status-bar';
-import { useTheme } from '../context/ThemeContext';
-import { AuthProvider, useAuth } from '../context/AuthContext';
+import { useEffect } from 'react';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ActivityIndicator, View } from 'react-native';
-import React, { useEffect } from 'react';
-
+import 'react-native-reanimated';
+import Toast, { BaseToast, ErrorToast, BaseToastProps } from 'react-native-toast-message';
+import { AuthProvider, useAuth } from '../context/AuthContext';
+import { OfflineProvider } from '../context/OfflineContext';
+import { ThemeProvider, useTheme } from '../context/ThemeContext';
 
 // This component shows the system status bar with proper theming for edge-to-edge UI
 function ThemedStatusBar() {
@@ -94,18 +94,55 @@ const InitialLayout = () => {
   );
 };
 
+const toastConfig = {
+  success: (props: BaseToastProps) => (
+    <BaseToast
+      {...props}
+      style={{ borderLeftColor: '#69C779', backgroundColor: '#F0FFF0', height: 'auto', minHeight: 60, paddingVertical: 10 }}
+      contentContainerStyle={{ paddingHorizontal: 15 }}
+      text1Style={{
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#2E8B57'
+      }}
+      text2Style={{
+        fontSize: 14,
+        color: '#3CB371'
+      }}
+    />
+  ),
+  error: (props: BaseToastProps) => (
+    <ErrorToast
+      {...props}
+      style={{ borderLeftColor: '#FF6347', backgroundColor: '#FFF0F0', height: 'auto', minHeight: 60, paddingVertical: 10 }}
+      text1Style={{
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#D22B2B'
+      }}
+      text2Style={{
+        fontSize: 14,
+        color: '#CD5C5C'
+      }}
+    />
+  ),
+};
+
 export default function RootLayout() {
   return (
     // Wrap providers in correct hierarchy
-    <AuthProvider>
-      <ThemeProvider>
-        <OfflineProvider>
-          <View style={{ flex: 1, backgroundColor: 'transparent' }}>
-            <ThemedStatusBar />
-            <InitialLayout />
-          </View>
-        </OfflineProvider>
-      </ThemeProvider>
-    </AuthProvider>
+    <SafeAreaProvider>
+      <AuthProvider>
+        <ThemeProvider>
+          <OfflineProvider>
+            <View style={{ flex: 1, backgroundColor: 'transparent' }}>
+              <ThemedStatusBar />
+              <InitialLayout />
+              <Toast config={toastConfig} />
+            </View>
+          </OfflineProvider>
+        </ThemeProvider>
+      </AuthProvider>
+    </SafeAreaProvider>
   );
 }

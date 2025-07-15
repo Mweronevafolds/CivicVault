@@ -1,21 +1,24 @@
-import React, { useState, useEffect } from 'react';
-import {
-  StyleSheet,
-  Text,
-  View,
-  SafeAreaView,
-  ScrollView,
-  TouchableOpacity,
-  ActivityIndicator,
-  RefreshControl,
-} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect, useRouter } from 'expo-router';
+import React, { useState } from 'react';
+import {
+    ActivityIndicator,
+    RefreshControl,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
-import { Stack, useRouter } from 'expo-router';
-import { getUserSubmissions } from '../api/ApiService'; // NEW: Import our fetch function
+import { getAllSubmissionsForAdmin, getUserSubmissions } from '../api/ApiService'; // Import the new function
+import { useTheme } from '../context/ThemeContext'; // Import useTheme
 
-const DashboardScreen = () => {
+const DashboardScreen = ({ isAdmin }) => {
   const router = useRouter();
+  const { colors } = useTheme(); // Get theme colors
+  const styles = getStyles(colors); // Create styles with theme colors
   
   // NEW: State to hold live data, loading status, and errors
   const [submissions, setSubmissions] = useState([]);
@@ -28,7 +31,8 @@ const DashboardScreen = () => {
     setLoading(true);
     setError(null);
     try {
-      const userSubmissions = await getUserSubmissions();
+      // Conditionally fetch data based on the user's role
+      const userSubmissions = isAdmin ? await getAllSubmissionsForAdmin() : await getUserSubmissions();
       setSubmissions(userSubmissions);
 
       // Calculate metrics from the fetched data
@@ -44,10 +48,12 @@ const DashboardScreen = () => {
     }
   };
 
-  // NEW: useEffect hook to fetch data when the screen loads
-  useEffect(() => {
-    fetchData();
-  }, []);
+  // Re-fetch data every time the screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchData();
+    }, [])
+  );
 
   // Helper to render the metric cards with live data
   const renderMetricCard = (title, value, iconName, color) => (
@@ -61,16 +67,19 @@ const DashboardScreen = () => {
   // Helper to render an item in the "Recent Activity" list
   const renderActivityItem = ({ item }) => {
     const isApproved = item.status === 'approved';
+    const statusColor = isApproved ? colors.success : colors.warning;
+    const statusBgColor = isApproved ? colors.successSoft : colors.warningSoft;
+
     return (
         <View style={styles.activityItem}>
-            <View style={[styles.activityIconContainer, { backgroundColor: isApproved ? '#dcfce7' : '#fef9c3' }]}>
-                <Ionicons name={isApproved ? 'checkmark-circle' : 'time'} size={24} color={isApproved ? '#22c55e' : '#f59e0b'} />
+            <View style={[styles.activityIconContainer, { backgroundColor: statusBgColor }]}>
+                <Ionicons name={isApproved ? 'checkmark-circle' : 'time'} size={24} color={statusColor} />
             </View>
             <View style={styles.activityDetails}>
                 <Text style={styles.activityType}>{item.doc_type}</Text>
                 <Text style={styles.activityDate}>{new Date(item.created_at).toLocaleDateString()}</Text>
             </View>
-            <Text style={[styles.activityStatus, { color: isApproved ? '#22c55e' : '#f59e0b' }]}>{item.status}</Text>
+            <Text style={[styles.activityStatus, { color: statusColor }]}>{item.status}</Text>
         </View>
     );
   };
@@ -79,8 +88,8 @@ const DashboardScreen = () => {
   if (loading && submissions.length === 0) {
     return (
         <SafeAreaView style={styles.center}>
-            <ActivityIndicator size="large" color="#2563eb" />
-            <Text style={{marginTop: 10}}>Loading Your Dashboard...</Text>
+            <ActivityIndicator size="large" color={colors.primary} />
+            <Text style={{marginTop: 10, color: colors.text}}>Loading Your Dashboard...</Text>
         </SafeAreaView>
     );
   }
@@ -88,25 +97,24 @@ const DashboardScreen = () => {
   if (error) {
     return (
         <SafeAreaView style={styles.center}>
-            <Text>Error: {error}</Text>
-            <TouchableOpacity onPress={fetchData}><Text style={{color: 'blue'}}>Try Again</Text></TouchableOpacity>
+            <Text style={{color: colors.text}}>Error: {error}</Text>
+            <TouchableOpacity onPress={fetchData}><Text style={{color: colors.primary}}>Try Again</Text></TouchableOpacity>
         </SafeAreaView>
     );
   }
 
   return (
     <SafeAreaView style={styles.container}>
-      <Stack.Screen options={{ headerStyle: { backgroundColor: '#fff' }, headerTintColor: '#111', title: 'My CivicVault Dashboard', headerTitleAlign: 'center', headerShadowVisible: false }} />
+      {/* The header is managed by the navigator, so we remove this Stack.Screen */}
       <ScrollView 
         contentContainerStyle={styles.scrollContainer}
         refreshControl={<RefreshControl refreshing={loading} onRefresh={fetchData} />}
       >
         <View style={styles.metricsGrid}>
-          {renderMetricCard('My Submissions', metrics.total, 'document-text-outline', '#2563eb')}
-          {renderMetricCard('Approved', metrics.approved, 'shield-checkmark-outline', '#22c55e')}
-          {renderMetricCard('Pending', metrics.pending, 'hourglass-outline', '#f59e0b')}
-          {/* We'll get offline queue count from context later */}
-          {renderMetricCard('Offline Queue', 0, 'cloud-offline-outline', '#6b7280')}
+          {renderMetricCard(isAdmin ? 'Total Submissions' : 'My Submissions', metrics.total, 'document-text-outline', colors.primary)}
+          {renderMetricCard('Approved', metrics.approved, 'shield-checkmark-outline', colors.success)}
+          {renderMetricCard('Pending', metrics.pending, 'hourglass-outline', colors.warning)}
+          {renderMetricCard('Offline Queue', 0, 'cloud-offline-outline', colors.textSecondary)}
         </View>
 
         <Text style={styles.sectionTitle}>My Submission Locations</Text>
@@ -129,28 +137,28 @@ const DashboardScreen = () => {
   );
 };
 
-// --- STYLES (Keep the same styles from the previous step) ---
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8f9fa' },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+// --- STYLES --- 
+const getStyles = (colors) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.background },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background },
   scrollContainer: { padding: 15 },
-  sectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#333', marginBottom: 15, marginTop: 10 },
+  sectionTitle: { fontSize: 18, fontWeight: 'bold', color: colors.text, marginBottom: 15, marginTop: 10 },
   metricsGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginBottom: 10 },
-  metricCard: { width: '48%', aspectRatio: 1, backgroundColor: '#fff', borderRadius: 15, padding: 10, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#e5e7eb', marginBottom: 10 },
-  metricValue: { fontSize: 24, fontWeight: 'bold', color: '#111', marginTop: 5 },
-  metricTitle: { fontSize: 11, color: '#6b7280', fontWeight: '600', marginTop: 2 },
+  metricCard: { width: '48%', aspectRatio: 1, backgroundColor: colors.card, borderRadius: 15, padding: 10, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.border, marginBottom: 10 },
+  metricValue: { fontSize: 24, fontWeight: 'bold', color: colors.text, marginTop: 5 },
+  metricTitle: { fontSize: 11, color: colors.textSecondary, fontWeight: '600', marginTop: 2 },
   mapContainer: { height: 200, borderRadius: 15, overflow: 'hidden', marginBottom: 20, justifyContent: 'center', alignItems: 'center' },
   map: { ...StyleSheet.absoluteFillObject },
   mapOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.3)', justifyContent: 'center', alignItems: 'center' },
   mapOverlayText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
-  activityList: { backgroundColor: '#fff', borderRadius: 15, padding: 10, borderWidth: 1, borderColor: '#e5e7eb' },
-  activityItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 15, borderBottomWidth: 1, borderBottomColor: '#f3f4f6' },
+  activityList: { backgroundColor: colors.card, borderRadius: 15, padding: 10, borderWidth: 1, borderColor: colors.border },
+  activityItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 15, borderBottomWidth: 1, borderBottomColor: colors.border },
   activityIconContainer: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center', marginRight: 15 },
   activityDetails: { flex: 1 },
-  activityType: { fontSize: 16, fontWeight: '600', color: '#111' },
-  activityDate: { fontSize: 13, color: '#6b7280' },
+  activityType: { fontSize: 16, fontWeight: '600', color: colors.text },
+  activityDate: { fontSize: 13, color: colors.textSecondary },
   activityStatus: { fontSize: 14, fontWeight: 'bold' },
-  placeholderText: { textAlign: 'center', padding: 20, color: '#6b7280' },
+  placeholderText: { textAlign: 'center', padding: 20, color: colors.textSecondary },
 });
 
 export default DashboardScreen;

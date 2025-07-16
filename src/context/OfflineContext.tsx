@@ -2,13 +2,16 @@ import React, { createContext, useState, useEffect, useContext, ReactNode } from
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';
 import { Alert } from 'react-native';
+import { createSubmission } from '../api/ApiService'; // We'll need this for processing the queue
 
 export interface OfflineItem {
   timestamp: number;
+  docType: 'birth' | 'id'; // Add docType to know what kind of form it is
   formData: {
     fullName: string;
     [key: string]: any;
   };
+  imageUri: string; // Add imageUri to handle image uploads
 }
 
 interface OfflineContextType {
@@ -18,6 +21,7 @@ interface OfflineContextType {
 }
 
 export const OfflineContext = createContext<OfflineContextType | undefined>(undefined);
+
 export const useOffline = () => {
   const context = useContext(OfflineContext);
   if (!context) {
@@ -47,18 +51,18 @@ export const OfflineProvider: React.FC<OfflineProviderProps> = ({ children }) =>
     loadQueue();
   }, []);
 
-  // Sync queue when online status changes to true
-    useEffect(() => {
-      const unsubscribe = NetInfo.addEventListener(state => {
-        const onlineStatus = (state.isConnected && state.isInternetReachable) ?? false;
-        setIsOnline(onlineStatus);
-        if (onlineStatus) {
-          processQueue();
-        }
-      });
+  // Process queue when online status changes to true
+  useEffect(() => {
+    const unsubscribe = NetInfo.addEventListener(state => {
+      const onlineStatus = !!state.isConnected && !!state.isInternetReachable;
+      setIsOnline(onlineStatus);
+      if (onlineStatus && queue.length > 0) {
+        processQueue();
+      }
+    });
 
-      return () => unsubscribe();
-    }, [queue]); // Rerun effect if queue changes while online
+    return () => unsubscribe();
+  }, [queue, isOnline]); // Rerun when queue or online status changes
 
   // Save queue to storage whenever it changes
   useEffect(() => {
@@ -68,36 +72,39 @@ export const OfflineProvider: React.FC<OfflineProviderProps> = ({ children }) =>
       } catch (error) {
         console.error('Failed to save offline queue:', error);
       }
-    }
+    };
     saveQueue();
   }, [queue]);
 
   const addToQueue = (item: OfflineItem) => {
     setQueue(prev => [...prev, item]);
+    Alert.alert("You're Offline", "Your submission has been saved and will be uploaded automatically when you're back online.");
   };
 
   const processQueue = async () => {
-    if (queue.length === 0) {
+    if (queue.length === 0 || !isOnline) {
       return;
     }
-    
+
     console.log('Processing offline queue...');
     let successCount = 0;
-    
-    // Create a mutable copy of the queue to work with
-    const newQueue = [...queue];
+    const remainingItems = [...queue];
 
     for (const item of queue) {
       try {
-        // Mock API call
-        console.log('Submitting item:', item.formData.fullName);
-        await new Promise(resolve => setTimeout(resolve, 1500)); 
+        // Here you would call your actual submission logic
+        console.log('Submitting item for:', item.formData.fullName);
+        await createSubmission({
+          ...item.formData,
+          doc_type: item.docType,
+          image_uri: item.imageUri
+        });
         
-        // On success, find and remove item from the temporary queue
-        const index = newQueue.findIndex(q => q.timestamp === item.timestamp);
+        // On success, remove item from the temporary queue
+        const index = remainingItems.findIndex(q => q.timestamp === item.timestamp);
         if (index > -1) {
-            newQueue.splice(index, 1);
-            successCount++;
+          remainingItems.splice(index, 1);
+          successCount++;
         }
       } catch (error) {
         console.error('Failed to submit item from queue:', error);
@@ -105,9 +112,10 @@ export const OfflineProvider: React.FC<OfflineProviderProps> = ({ children }) =>
       }
     }
     
-    setQueue(newQueue);
-    if(successCount > 0) {
-        Alert.alert("Sync Complete", `${successCount} offline submission(s) have been synced successfully.`);
+    setQueue(remainingItems);
+
+    if (successCount > 0) {
+      Alert.alert("Sync Complete", `${successCount} offline submission(s) have been synced successfully.`);
     }
   };
 

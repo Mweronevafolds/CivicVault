@@ -1,10 +1,11 @@
-import React, { useState, useContext } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
-import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { OfflineContext } from '../context/OfflineContext';
+import { router, useLocalSearchParams } from 'expo-router';
+import { useContext, useState } from 'react';
+import { ActivityIndicator, Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { ThemedView } from '../components/ThemedView';
 import { Colors } from '../constants/Colors';
+import { OfflineContext } from '../context/OfflineContext';
+import { useTheme } from '../context/ThemeContext';
 
 type DocumentType = 'birth' | 'id';
 

@@ -119,6 +119,26 @@ export default function HomeScreen() {
     router.push({ pathname: screen, params });
   };
 
+  useEffect(() => {
+    if (!loading && !profile) {
+      // Redirect to auth screen if no profile is found after loading
+      router.replace('/(auth)/sign-in');
+    }
+  }, [loading, profile]);
+
+  if (loading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
+
+  if (!profile) {
+    // This will be briefly shown before the redirect happens
+    return null;
+  }
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
       <MobileDashboard onNavigate={handleNavigation} isAdmin={isAdmin} profile={profile} />

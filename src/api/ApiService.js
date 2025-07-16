@@ -134,14 +134,89 @@ export const getPendingSubmissionsForAdmin = async () => {
       .from('submissions')
       .select('*') // Get all columns
       .eq('status', 'pending') // Filter by status
-      .order('created_at', { ascending: true }); // Show the oldest first
+      .order('created_at', { ascending: false }); // Show the newest first
 
     if (error) throw error;
     
     return data;
   } catch (error) {
     console.error('Error fetching pending submissions for admin:', error);
-    throw new Error('Could not fetch pending submissions.');
+    throw new Error('Could not fetch pending applications.');
+  }
+};
+
+/**
+ * Fetches a single submission by its ID.
+ * @param {string} submissionId The ID of the submission.
+ * @returns {Promise<object>} The submission object.
+ */
+export const getSubmissionById = async (submissionId) => {
+  try {
+    const { data, error } = await supabase
+      .from('submissions')
+      .select('*')
+      .eq('id', submissionId)
+      .single();
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error(`Error fetching submission by ID (${submissionId}):`, error);
+    throw new Error('Could not fetch the specified application.');
+  }
+};
+
+/**
+ * Updates the status of a submission. Admin role required.
+ * @param {string} submissionId The ID of the submission to update.
+ * @param {'approved' | 'rejected'} status The new status.
+ * @returns {Promise<object>} The updated submission data.
+ */
+export const updateSubmissionStatus = async (submissionId, status) => {
+  try {
+    const { data, error } = await supabase
+      .from('submissions')
+      .update({ status: status, updated_at: new Date() })
+      .eq('id', submissionId)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    console.log(`Submission ${submissionId} status updated to ${status}`);
+    return data;
+  } catch (error) {
+    console.error('Error updating submission status:', error);
+    throw new Error('Failed to update application status.');
+  }
+};
+
+/**
+ * Fetches dashboard statistics for admins.
+ * @returns {Promise<object>} An object containing various stats.
+ */
+export const getAdminDashboardStats = async () => {
+  try {
+    const [births, ids, pending, rejected] = await Promise.all([
+      supabase.from('submissions').select('id', { count: 'exact', head: true }).eq('doc_type', 'Birth Certificate'),
+      supabase.from('submissions').select('id', { count: 'exact', head: true }).eq('doc_type', 'ID Card'),
+      supabase.from('submissions').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+      supabase.from('submissions').select('id', { count: 'exact', head: true }).eq('status', 'rejected')
+    ]);
+
+    if (births.error || ids.error || pending.error || rejected.error) {
+      throw new Error('Failed to fetch all dashboard stats.');
+    }
+
+    return {
+      registeredBirths: births.count || 0,
+      idRequests: ids.count || 0,
+      pendingApprovals: pending.count || 0,
+      rejectedRequests: rejected.count || 0
+    };
+  } catch (error) {
+    console.error('Error fetching admin dashboard stats:', error);
+    throw new Error('Could not fetch dashboard statistics.');
   }
 };
 

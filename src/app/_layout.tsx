@@ -11,7 +11,7 @@ import { ThemeProvider, useTheme } from '../context/ThemeContext';
 
 // This component shows the system status bar with proper theming for edge-to-edge UI
 function ThemedStatusBar() {
-  const { isDark, colors } = useTheme();
+  const { isDark } = useTheme();
   
   return (
     <View style={{
@@ -20,7 +20,6 @@ function ThemedStatusBar() {
       left: 0,
       right: 0,
       height: 0, // Takes no space but provides the background
-      backgroundColor: colors.background,
       zIndex: 1000,
     }}>
       <StatusBar 
@@ -38,21 +37,24 @@ const InitialLayout = () => {
   const router = useRouter();
 
   useEffect(() => {
-    // Don't do anything until the auth state is loaded
-    if (loading) return;
+    // If we're still loading the user session, don't do anything.
+    if (loading) {
+      return;
+    }
 
+    const inTabsGroup = segments[0] === '(tabs)';
     const inAuthGroup = segments[0] === '(auth)';
 
-    if (user && !inAuthGroup) {
-      // User is signed in and not in the auth group.
+    if (user && inAuthGroup) {
+      // User is signed in and in the auth group.
       // Redirect them to the main app (home screen).
-      router.replace('/home');
-    } else if (!user) {
-      // User is not signed in.
-      // Redirect them to the login screen.
-      router.replace('/');
+      router.replace('/(tabs)/home');
+    } else if (!user && inTabsGroup) {
+      // User is not signed in and trying to access a protected route.
+      // Redirect them to the auth screen.
+      router.replace('/(auth)');
     }
-  }, [user, loading]);
+  }, [user, loading, segments]);
 
   if (loading) {
     // Show a loading spinner while we check for a session
@@ -132,17 +134,17 @@ export default function RootLayout() {
   return (
     // Wrap providers in correct hierarchy
     <SafeAreaProvider>
-      <AuthProvider>
-        <ThemeProvider>
-          <OfflineProvider>
+      <OfflineProvider>
+        <AuthProvider>
+          <ThemeProvider>
             <View style={{ flex: 1, backgroundColor: 'transparent' }}>
               <ThemedStatusBar />
               <InitialLayout />
               <Toast config={toastConfig} />
             </View>
-          </OfflineProvider>
-        </ThemeProvider>
-      </AuthProvider>
+          </ThemeProvider>
+        </AuthProvider>
+      </OfflineProvider>
     </SafeAreaProvider>
   );
 }

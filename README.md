@@ -1,50 +1,145 @@
-# Welcome to your Expo app 👋
+# CivicVault
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+CivicVault is a secure and simple solution for birth and ID registration, allowing you to manage your important civic documents safely and access them anytime, anywhere. This project is built with Expo and React Native, using file-based routing with Expo Router.
 
-## Get started
+## Project Overview
 
-1. Install dependencies
+- The app uses Expo Router for navigation.
+- On first launch, users are shown an onboarding flow to introduce the app features.
+- After onboarding, users are directed to the authentication flow.
+- The onboarding flow consists of a 3-page swiper with images and descriptions.
+- The app stores a flag in AsyncStorage (`alreadyLaunched`) to track if onboarding has been completed.
+- The obsolete `src/navigation/AppNavigator.js` file should be removed to avoid confusion.
 
-   ```bash
-   npm install
-   ```
+## Getting Started
 
-2. Start the app
+### Prerequisites
 
-   ```bash
-   npx expo start
-   ```
+- Node.js and npm installed
+- Expo CLI installed globally (`npm install -g expo-cli`)
+- A Supabase account and project (see Supabase Setup below)
 
-In the output, you'll find options to open the app in a
+### Installation
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+1. Clone the repository and navigate to the project directory.
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+2. Install dependencies:
 
-## Get a fresh project
+```bash
+npm install
+```
 
-When you're ready, run:
+3. Start the app:
+
+```bash
+npx expo start
+```
+
+You can open the app in:
+
+- Development build
+- Android emulator
+- iOS simulator
+- Expo Go app
+
+### Resetting the Project
+
+To reset the project to a fresh state, run:
 
 ```bash
 npm run reset-project
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+This moves the starter code to the `app-example` directory and creates a blank `app` directory for development.
 
-## Learn more
+## Supabase Setup
 
-To learn more about developing your project with Expo, look at the following resources:
+This project uses Supabase as the backend for authentication, storage, and database.
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+### Prerequisites
 
-## Join the community
+- A Supabase account: https://supabase.com/
+- A Supabase project
 
-Join our community of developers creating universal apps.
+### Database Setup
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+1. Go to your Supabase project dashboard.
+2. Navigate to the SQL Editor.
+3. Run the SQL migration script located at `supabase/migrations/20230713150000_create_tables.sql`.
+
+### Environment Variables
+
+Create a `.env` file in the root of your project with the following variables:
+
+```env
+SUPABASE_URL=your_supabase_project_url
+SUPABASE_ANON_KEY=your_supabase_anon_key
+```
+
+### Storage Configuration
+
+1. In the Supabase dashboard, go to the Storage section.
+2. Verify that a `registrations` bucket exists (created by the migration).
+3. Ensure the bucket has the following CORS configuration:
+   - Allowed origins: `*` (or your app's domain in production)
+   - Allowed methods: GET, POST, PUT, DELETE
+   - Allowed headers: *
+   - Max age: 3600
+
+### Authentication Providers
+
+1. In Supabase dashboard, go to Authentication > Providers.
+2. Enable the "Email" provider.
+3. Configure your site URL and redirect URLs in Authentication > URL Configuration:
+   - Site URL: Your app's URL (e.g., `http://localhost:19006`)
+   - Redirect URLs: Add your app's redirect URLs (e.g., `http://localhost:19006/auth/callback`)
+
+### Email Templates (Optional)
+
+Customize email templates in Authentication > Templates if needed.
+
+### Testing
+
+1. Sign up a new user.
+2. Verify receipt of confirmation email.
+3. Log in with the new user.
+4. Test document submission and file uploads.
+
+## Usage Guide
+
+### Onboarding Flow
+
+- On first launch, the app shows a 3-page onboarding swiper introducing CivicVault features.
+- The onboarding screens include welcome messages, security features, and getting started instructions.
+- After completing or skipping onboarding, the app sets `alreadyLaunched` in AsyncStorage to prevent showing onboarding again.
+- Users are then redirected to the authentication flow.
+
+### Resetting Onboarding for Testing
+
+To test the onboarding screen again, you can clear the flag by running this in your app's console or code:
+
+```js
+import AsyncStorage from '@react-native-async-storage/async-storage';
+AsyncStorage.removeItem('alreadyLaunched');
+```
+
+### Navigation
+
+- The initial route logic is in `src/app/index.tsx`.
+- The onboarding route is in `src/app/onboarding.tsx`.
+- The onboarding UI is implemented in `src/screens/OnboardingScreen.js`.
+
+## Important Note
+
+The file `src/navigation/AppNavigator.js` is obsolete with the adoption of Expo Router and should be removed to avoid confusion.
+
+## Learn More
+
+- [Expo documentation](https://docs.expo.dev/)
+- [React Native documentation](https://reactnative.dev/)
+- [Supabase documentation](https://supabase.com/docs)
+
+## Join the Community
+
+- [Expo on GitHub](https://github.com/expo/expo)
+- [Expo Discord](https://chat.expo.dev)

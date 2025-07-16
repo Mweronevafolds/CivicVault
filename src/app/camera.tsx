@@ -1,30 +1,45 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, SafeAreaView, ActivityIndicator, Alert, Image } from 'react-native';
-// NEW: Import CameraView and useCameraPermissions from expo-camera
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
 import * as ImageManipulator from 'expo-image-manipulator';
+import { getCurrentLocation } from '../../src/api/LocationService';
 
 const CameraScreen = () => {
   const router = useRouter();
   const params = useLocalSearchParams();
   
-  // NEW: Use the modern hook for permissions
   const [permission, requestPermission] = useCameraPermissions();
+  const [location, setLocation] = useState<any | null>(null);
+  const [isLoadingLocation, setIsLoadingLocation] = useState(false);
   
   const [capturedImage, setCapturedImage] = useState<{ uri: string } | null>(null);
   const [isCapturing, setIsCapturing] = useState(false);
-  
-  // NEW: The ref should be typed to CameraView
   const cameraRef = useRef<CameraView | null>(null);
 
-  // Check permissions when the component loads
   useEffect(() => {
     if (!permission) {
       requestPermission();
     }
   }, [permission]);
+
+  // Get current location
+  useEffect(() => {
+    const fetchLocation = async () => {
+      setIsLoadingLocation(true);
+      try {
+        const loc = await getCurrentLocation();
+        setLocation(loc);
+      } catch (error) {
+        console.error('Error getting location:', error);
+      } finally {
+        setIsLoadingLocation(false);
+      }
+    };
+
+    fetchLocation();
+  }, []);
 
   const takePicture = async () => {
     if (!cameraRef.current) return;
@@ -48,10 +63,17 @@ const CameraScreen = () => {
   };
 
   const handleUsePhoto = () => {
-    if (!capturedImage) return;
+    if (!capturedImage || !location) return;
     router.push({
-        pathname: '/form', // Corrected path
-        params: { imageUri: capturedImage.uri, docType: params.type as string }
+      pathname: '/form',
+      params: {
+        imageUri: capturedImage.uri,
+        docType: params.type as string,
+        latitude: location.latitude,
+        longitude: location.longitude,
+        accuracy: location.accuracy,
+        timestamp: location.timestamp
+      }
     });
   };
 

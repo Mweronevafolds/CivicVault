@@ -14,6 +14,8 @@ function ThemedStatusBar() {
 }
 
 export default function AuthLayout() {
+  const { colors } = useTheme();
+  
   return (
     <>
       <ThemedStatusBar />
@@ -21,7 +23,7 @@ export default function AuthLayout() {
         screenOptions={{
           headerShown: false,
           contentStyle: { 
-            backgroundColor: 'transparent',
+            backgroundColor: colors.background,
             paddingTop: 0,
           },
           animation: 'fade',
@@ -32,7 +34,7 @@ export default function AuthLayout() {
           options={{ 
             headerShown: false,
             contentStyle: {
-              backgroundColor: 'transparent',
+              backgroundColor: colors.background,
               paddingTop: 0,
             },
           }} 
